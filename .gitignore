@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environment
+.env
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# AI Models (User requested privacy)
+*.joblib
+*.pkl
+*.h5
+*.onnx
+*.pt
+
+# Data / Caches
+data/news_cache.json
+*.csv
+*.log
+logs/
+
+# IDE/OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
