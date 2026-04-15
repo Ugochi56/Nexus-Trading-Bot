@@ -8,7 +8,8 @@ class SMCOrderBlockStrategy(BaseStrategy):
         super().__init__("SMC_ORDERBLOCK")
         self.trend_model = ai_model
         self.active_break_dir = None
-        self.active_ob = None
+        self.active_obs = []
+        self.max_obs = 3
         self.last_traded_ob_time = None
         self.ai_throttle_timer = 0
         self.structural_lookback = 40  # Lookback for Swing High/Low
@@ -117,53 +118,60 @@ class SMCOrderBlockStrategy(BaseStrategy):
         new_ob = self.find_order_block(df_m5)
         
         if new_ob and new_ob['time'] != self.last_traded_ob_time:
-            if self.active_ob is None or new_ob['time'] != self.active_ob['time']:
-                self.active_ob = new_ob
-                print(f"\n[OB] [FRESH ORDER BLOCK]: {self.active_ob['type']} {self.active_ob['bottom']:.2f}-{self.active_ob['top']:.2f}")
+            if not any(ob['time'] == new_ob['time'] for ob in self.active_obs):
+                self.active_obs.append(new_ob)
+                if len(self.active_obs) > self.max_obs:
+                    self.active_obs.pop(0)
+                print(f"\n[OB] [FRESH ORDER BLOCK]: {new_ob['type']} {new_ob['bottom']:.2f}-{new_ob['top']:.2f}")
 
-        if self.active_ob:
-            action_msg = f"[OB_WATCH] {self.active_ob['type']}"
+        if self.active_obs:
+            action_msg = f"[OB_WATCH] {len(self.active_obs)} Active Block(s)"
             
-            if self.active_ob['type'] == 'BUY':
-                if current_price < self.active_ob['bottom']: 
-                    print(f"\n[OB] [BLOCK INVALIDATED]: BUY {self.active_ob['bottom']:.2f} Penetrated/Mitigated.")
-                    self.active_ob = None
+            valid_obs = []
+            for ob in self.active_obs:
+                is_valid = True
                 
-                # Execution Trigger: Price falls into the top of the Block
-                elif current_price <= self.active_ob['top'] and (time.time() - self.ai_throttle_timer > 3.0):
-                    self.ai_throttle_timer = time.time()
-                    ai_verdict, ai_conf = self.get_trend_ai_permission(df_m5) 
+                if ob['type'] == 'BUY':
+                    if current_price < ob['bottom']: 
+                        print(f"\n[OB] [BLOCK INVALIDATED]: BUY {ob['bottom']:.2f} Penetrated/Mitigated.")
+                        is_valid = False
                     
-                    if ai_verdict == 'BUY':
-                        # The SL is exactly 1 pip/fraction below the absolute bottom wick. Pure structural risk.
-                        structural_sl = self.active_ob['bottom'] - spread_padding
-                        signal_payload = {'signal': 'BUY', 'sl': structural_sl, 'confidence': ai_conf, 'comment': f"OB AI:{ai_conf:.2f}"}
-                        self.last_traded_ob_time = self.active_ob['time']
-                        self.active_ob = None
-                    else:
-                        if ai_verdict == 'SELL': reason = "Predicts trend reversal (DOWN)"
-                        else: reason = f"Uncertain market (Score < {AI_CONFIDENCE_THRESHOLD})"
-                        print(f"\n[OB] [AI DENIED OB BUY] ({ai_conf:.2f}) -> {reason}")
+                    elif current_price <= ob['top'] and (time.time() - self.ai_throttle_timer > 3.0):
+                        self.ai_throttle_timer = time.time()
+                        ai_verdict, ai_conf = self.get_trend_ai_permission(df_m5) 
+                        
+                        if ai_verdict == 'BUY':
+                            structural_sl = ob['bottom'] - spread_padding
+                            signal_payload = {'signal': 'BUY', 'sl': structural_sl, 'confidence': ai_conf, 'comment': f"OB AI:{ai_conf:.2f}"}
+                            self.last_traded_ob_time = ob['time']
+                            is_valid = False 
+                        else:
+                            if ai_verdict == 'SELL': reason = "Predicts trend reversal (DOWN)"
+                            else: reason = f"Uncertain market (Score < {AI_CONFIDENCE_THRESHOLD})"
+                            print(f"\n[OB] [AI DENIED OB BUY] ({ai_conf:.2f}) -> {reason}")
 
-            elif self.active_ob['type'] == 'SELL':
-                if current_price > self.active_ob['top']: 
-                    print(f"\n[OB] [BLOCK INVALIDATED]: SELL {self.active_ob['top']:.2f} Penetrated/Mitigated.")
-                    self.active_ob = None
+                elif ob['type'] == 'SELL':
+                    if current_price > ob['top']: 
+                        print(f"\n[OB] [BLOCK INVALIDATED]: SELL {ob['top']:.2f} Penetrated/Mitigated.")
+                        is_valid = False
+                        
+                    elif current_price >= ob['bottom'] and (time.time() - self.ai_throttle_timer > 3.0):
+                        self.ai_throttle_timer = time.time()
+                        ai_verdict, ai_conf = self.get_trend_ai_permission(df_m5) 
+                        
+                        if ai_verdict == 'SELL':
+                            structural_sl = ob['top'] + spread_padding
+                            signal_payload = {'signal': 'SELL', 'sl': structural_sl, 'confidence': ai_conf, 'comment': f"OB AI:{ai_conf:.2f}"}
+                            self.last_traded_ob_time = ob['time']
+                            is_valid = False
+                        else:
+                            if ai_verdict == 'BUY': reason = "Predicts trend reversal (UP)"
+                            else: reason = f"Uncertain market (Score < {AI_CONFIDENCE_THRESHOLD})"
+                            print(f"\n[OB] [AI DENIED OB SELL] ({ai_conf:.2f}) -> {reason}")
+                
+                if is_valid:
+                    valid_obs.append(ob)
                     
-                # Execution Trigger: Price rises into the bottom of the Block
-                elif current_price >= self.active_ob['bottom'] and (time.time() - self.ai_throttle_timer > 3.0):
-                    self.ai_throttle_timer = time.time()
-                    ai_verdict, ai_conf = self.get_trend_ai_permission(df_m5) 
-                    
-                    if ai_verdict == 'SELL':
-                        # The SL is physically above the absolute top wick. Pure structural risk.
-                        structural_sl = self.active_ob['top'] + spread_padding
-                        signal_payload = {'signal': 'SELL', 'sl': structural_sl, 'confidence': ai_conf, 'comment': f"OB AI:{ai_conf:.2f}"}
-                        self.last_traded_ob_time = self.active_ob['time']
-                        self.active_ob = None
-                    else:
-                        if ai_verdict == 'BUY': reason = "Predicts trend reversal (UP)"
-                        else: reason = f"Uncertain market (Score < {AI_CONFIDENCE_THRESHOLD})"
-                        print(f"\n[OB] [AI DENIED OB SELL] ({ai_conf:.2f}) -> {reason}")
+            self.active_obs = valid_obs
 
         return {'payload': signal_payload, 'ui': action_msg}
