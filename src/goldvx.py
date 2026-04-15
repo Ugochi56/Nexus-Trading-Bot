@@ -1,7 +1,12 @@
 import time
 import sys
+import os
 import joblib
 from datetime import datetime
+
+# Add the project root to sys.path so 'core', 'engine' and 'strategies' can be found
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from core.config import *
 from core.utils import is_us_dst, get_session_name
 from core.indicators import calculate_atr_simple, calculate_rsi_simple, calculate_adx_simple
