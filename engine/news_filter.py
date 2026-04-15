@@ -41,13 +41,26 @@ def fetch_economic_news():
         response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status() 
         
-        daily_news_data = response.json()
+        raw_data = response.json()
+        
+        # Color code the JSON cache for readability
+        color_map = {
+            "High": "🔴 High (Red Folder)",
+            "Medium": "🟠 Medium (Orange Folder)",
+            "Low": "🟡 Low (Yellow Folder)",
+            "Non": "⚪ Non-Economic"
+        }
+        for item in raw_data:
+            orig = item.get("impact", "")
+            item["impact"] = color_map.get(orig, orig)
+            
+        daily_news_data = raw_data
         last_news_fetch_day = curr_day
         api_failed_lockdown = False
         
         os.makedirs("data", exist_ok=True)
         with open(cache_file, "w") as f:
-            json.dump({"day": curr_day, "data": daily_news_data}, f)
+            json.dump({"day": curr_day, "data": daily_news_data}, f, indent=4)
             
         print(f"[SUCCESS] News Database Fetched & Cached Successfully.")
     except Exception as e:
@@ -60,7 +73,7 @@ def is_news_blackout():
     
     now_utc = datetime.now(timezone.utc)
     for event in daily_news_data:
-        if event.get('country') == 'USD' and event.get('impact') == 'High':
+        if event.get('country') == 'USD' and 'High' in event.get('impact', ''):
             try:
                 event_time_utc = datetime.fromisoformat(event.get('date')).astimezone(timezone.utc)
                 diff = abs((now_utc - event_time_utc).total_seconds())

@@ -32,3 +32,4 @@ logs/
 *.swp
 .DS_Store
 Thumbs.db
+data/nexus_state.json
