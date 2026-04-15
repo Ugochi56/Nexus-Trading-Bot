@@ -10,7 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.config import *
 from core.utils import is_us_dst, get_session_name
 from core.indicators import calculate_atr_simple, calculate_rsi_simple, calculate_adx_simple
-from engine.mt5_interface import connect_mt5, check_daily_drawdown, get_market_data, execute_trade, manage_open_positions, check_volatility_guard, close_all_positions
+from engine.mt5_interface import connect_mt5, check_daily_drawdown, get_market_data, execute_trade, manage_open_positions, check_volatility_guard, close_all_positions, get_dynamic_kelly_risk
 from engine.news_filter import fetch_economic_news, is_news_blackout
 from strategies.smc_fvg import SMCStrategy
 from strategies.rsi_reversion import RSIReversionStrategy
@@ -116,6 +116,7 @@ def main():
             
             if is_news_blackout():
                 print(f"\r[SLEEP] RED NEWS BLACKOUT ACTIVE".ljust(90), end='')
+                for strat in strategies.values(): strat.reset()
                 time.sleep(10); continue
                 
             server_time = datetime.fromtimestamp(tick.time)
@@ -140,6 +141,9 @@ def main():
             sess_map = {"ASIAN": "ASIA", "LONDON": "LDN", "NY_LONDON_OVERLAP": "OLAP", "NEW_YORK": "NY", "ROLLOVER": "ROLL"}
             short_session = sess_map.get(current_session, current_session)
             current_risk = SESSION_RISK.get(current_session, 0.0)
+            
+            if DYNAMIC_RISK and current_risk > 0:
+                current_risk = get_dynamic_kelly_risk(current_risk)
             
             dst_tag = "[DST]" if is_dst_active else ""
             if server_hour < ASIAN_OPEN_HOUR or server_hour >= TRADING_END_HOUR:

@@ -17,3 +17,9 @@ class BaseStrategy:
             }
         """
         raise NotImplementedError("Strategy must implement evaluate() method")
+
+    def reset(self):
+        """
+        Flushes all active algorithmic memory (strats/arrays).
+        """
+        pass

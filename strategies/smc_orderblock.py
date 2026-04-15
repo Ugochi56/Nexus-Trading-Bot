@@ -14,6 +14,11 @@ class SMCOrderBlockStrategy(BaseStrategy):
         self.ai_throttle_timer = 0
         self.structural_lookback = 40  # Lookback for Swing High/Low
 
+    def reset(self):
+        self.active_obs = []
+        self.active_break_dir = None
+        self.last_traded_ob_time = None
+
     def get_trend_ai_permission(self, df_m5):
         if not USE_AI_FILTER or self.trend_model is None:
             return 'SKIP_CHECK', 0.0

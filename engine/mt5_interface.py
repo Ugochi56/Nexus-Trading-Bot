@@ -62,6 +62,30 @@ def get_market_data(symbol, timeframe, n=1000):
     df['tick_volume'] = df['tick_volume'].astype(float) 
     return df
 
+def get_dynamic_kelly_risk(base_risk):
+    if DRY_RUN: return base_risk
+    
+    time_from = datetime.now().astimezone() - pd.Timedelta(hours=24)
+    deals = mt5.history_deals_get(time_from, datetime.now().astimezone())
+    if deals is None or len(deals) == 0: return base_risk
+    
+    # Isolate out-deals (closed positions) by this exact bot
+    bot_deals = [d for d in deals if d.magic == MAGIC_NUMBER and d.entry == mt5.DEAL_ENTRY_OUT]
+    if len(bot_deals) < 2: return base_risk
+    
+    # Track discrete win/loss sequences (ignoring tiny scratch BE trades under $0.50)
+    outcomes = []
+    for d in bot_deals:
+        if d.profit > 0.50: outcomes.append(1)
+        elif d.profit < -0.50: outcomes.append(-1)
+        
+    if len(outcomes) >= 3 and sum(outcomes[-3:]) == 3:
+        return base_risk * 1.5
+    elif len(outcomes) >= 2 and sum(outcomes[-2:]) == -2:
+        return base_risk * 0.5
+        
+    return base_risk
+
 def calculate_position_size(entry_price, sl_price, risk_pct):
     account, symbol_info = mt5.account_info(), mt5.symbol_info(SYMBOL)
     if not account or not symbol_info: return 0.01
