@@ -3,7 +3,7 @@ import MetaTrader5 as mt5
 # ==========================================
 # ⚙️ GLOBAL CONFIGURATION
 # ==========================================
-SYMBOL = "XAUUSD"
+SYMBOL = "XAUUSDm"
 TIMEFRAME_TREND = mt5.TIMEFRAME_H1
 TIMEFRAME_ENTRY = mt5.TIMEFRAME_M5
 TIMEFRAME_ADX   = mt5.TIMEFRAME_M15  
