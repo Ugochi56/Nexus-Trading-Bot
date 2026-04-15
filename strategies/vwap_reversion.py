@@ -10,6 +10,8 @@ class VWAPReversionStrategy(BaseStrategy):
         self.last_signal_time = None
         self.throttle_timer = 0
         self.sd_multiplier = 3.0  # 3 Standard Deviations for extreme anomaly stretches
+        self.anomaly_buy_locked = False
+        self.anomaly_sell_locked = False
 
     def calculate_vwap_bands(self, df):
         df = df.copy()
@@ -52,15 +54,24 @@ class VWAPReversionStrategy(BaseStrategy):
         dist_pct = abs((current_price - vwap_val) / vwap_val) * 100
         action_msg = f"[vDiv]: {dist_pct:.2f}%"
 
+        # Dynamic Normalization Reset
+        if current_price >= vwap_val and self.anomaly_buy_locked:
+            self.anomaly_buy_locked = False
+            print("\n[VWAP] [ANOMALY RESOLVED] Asset normalized above VWAP. Buy triggers unlocked.")
+        if current_price <= vwap_val and self.anomaly_sell_locked:
+            self.anomaly_sell_locked = False
+            print("\n[VWAP] [ANOMALY RESOLVED] Asset normalized below VWAP. Sell triggers unlocked.")
+
         # Signal Logic
         if self.last_signal_time != last_time and (time.time() - self.throttle_timer > 3.0):
             # Scalp risk override: purely mathematical strat
             r_pct = min(current_risk, 0.5)
             sl_padding = atr * SL_ATR_MULTIPLIER
 
-            if current_price >= upper_band:
+            if current_price >= upper_band and not self.anomaly_sell_locked:
                 self.throttle_timer = time.time()
                 self.last_signal_time = last_time
+                self.anomaly_sell_locked = True
                 signal_payload = {
                     'signal': 'SELL', 
                     'sl': current_price + sl_padding, 
@@ -70,9 +81,10 @@ class VWAPReversionStrategy(BaseStrategy):
                 }
                 print(f"\n[VWAP] [EXTREME VOLUMETRIC STRETCH] (+{self.sd_multiplier} SD). Snapping Back.")
                 
-            elif current_price <= lower_band:
+            elif current_price <= lower_band and not self.anomaly_buy_locked:
                 self.throttle_timer = time.time()
                 self.last_signal_time = last_time
+                self.anomaly_buy_locked = True
                 signal_payload = {
                     'signal': 'BUY', 
                     'sl': current_price - sl_padding, 
