@@ -5,6 +5,7 @@ import sys
 from datetime import datetime
 from core.config import *
 from core.indicators import *
+from core.state_manager import nexus_state
 
 virtual_positions = {}
 virtual_ticket_counter = 1000
@@ -24,19 +25,30 @@ def connect_mt5():
         print(f"\n[SUCCESS] Connected: {account_info.login} | ${account_info.balance:,.2f}")
 
 def check_daily_drawdown():
-    global daily_start_equity, last_day_checked
     account = mt5.account_info()
     if not account: return False
+    
     current_day = datetime.now().day
-    if current_day != last_day_checked:
-        daily_start_equity = account.equity
-        last_day_checked = current_day
-        print(f"\n[DAY] New Day Equity: ${daily_start_equity:.2f}")
+    cached_day = nexus_state.get('last_day_checked', -1)
+    
+    if current_day != cached_day:
+        nexus_state.set('daily_start_equity', account.equity)
+        nexus_state.set('last_day_checked', current_day)
+        nexus_state.set('is_halted', False)
+        print(f"\n[DAY] New Day Equity: ${account.equity:.2f} (Written to Drive)")
         return True
+        
+    if nexus_state.get('is_halted', False):
+        print(f"\r[HALT] Terminal structurally locked for the day. Wait for reset.".ljust(90), end='')
+        return False
+        
+    start_equity = nexus_state.get('daily_start_equity', account.equity)
     current_equity = account.equity
-    loss_percent = ((daily_start_equity - current_equity) / daily_start_equity) * 100
+    loss_percent = ((start_equity - current_equity) / start_equity) * 100
+    
     if loss_percent >= MAX_DAILY_LOSS_PERCENT:
         print(f"\n[HALT] DAILY LIMIT HIT! (-{loss_percent:.2f}%). EXECUTING GLOBAL LIQUIDATION...")
+        nexus_state.set('is_halted', True)
         close_all_positions()
         return False 
     return True

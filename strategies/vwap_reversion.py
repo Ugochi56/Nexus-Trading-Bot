@@ -3,6 +3,7 @@ from core.config import *
 import pandas_ta as ta
 import numpy as np
 import time
+from core.state_manager import nexus_state
 
 class VWAPReversionStrategy(BaseStrategy):
     def __init__(self, ai_model=None):
@@ -10,8 +11,16 @@ class VWAPReversionStrategy(BaseStrategy):
         self.last_signal_time = None
         self.throttle_timer = 0
         self.sd_multiplier = 3.0  # 3 Standard Deviations for extreme anomaly stretches
-        self.anomaly_buy_locked = False
-        self.anomaly_sell_locked = False
+        self.anomaly_buy_locked = nexus_state.get('vwap_buy_locked', False)
+        self.anomaly_sell_locked = nexus_state.get('vwap_sell_locked', False)
+
+    def set_buy_lock(self, status):
+        self.anomaly_buy_locked = status
+        nexus_state.set('vwap_buy_locked', status)
+
+    def set_sell_lock(self, status):
+        self.anomaly_sell_locked = status
+        nexus_state.set('vwap_sell_locked', status)
 
     def calculate_vwap_bands(self, df):
         df = df.copy()
@@ -56,10 +65,10 @@ class VWAPReversionStrategy(BaseStrategy):
 
         # Dynamic Normalization Reset
         if current_price >= vwap_val and self.anomaly_buy_locked:
-            self.anomaly_buy_locked = False
+            self.set_buy_lock(False)
             print("\n[VWAP] [ANOMALY RESOLVED] Asset normalized above VWAP. Buy triggers unlocked.")
         if current_price <= vwap_val and self.anomaly_sell_locked:
-            self.anomaly_sell_locked = False
+            self.set_sell_lock(False)
             print("\n[VWAP] [ANOMALY RESOLVED] Asset normalized below VWAP. Sell triggers unlocked.")
 
         # Signal Logic
@@ -71,7 +80,7 @@ class VWAPReversionStrategy(BaseStrategy):
             if current_price >= upper_band and not self.anomaly_sell_locked:
                 self.throttle_timer = time.time()
                 self.last_signal_time = last_time
-                self.anomaly_sell_locked = True
+                self.set_sell_lock(True)
                 signal_payload = {
                     'signal': 'SELL', 
                     'sl': current_price + sl_padding, 
@@ -84,7 +93,7 @@ class VWAPReversionStrategy(BaseStrategy):
             elif current_price <= lower_band and not self.anomaly_buy_locked:
                 self.throttle_timer = time.time()
                 self.last_signal_time = last_time
-                self.anomaly_buy_locked = True
+                self.set_buy_lock(True)
                 signal_payload = {
                     'signal': 'BUY', 
                     'sl': current_price - sl_padding, 
