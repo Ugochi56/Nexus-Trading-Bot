@@ -36,7 +36,8 @@ def check_daily_drawdown():
     current_equity = account.equity
     loss_percent = ((daily_start_equity - current_equity) / daily_start_equity) * 100
     if loss_percent >= MAX_DAILY_LOSS_PERCENT:
-        print(f"\n[HALT] DAILY LIMIT HIT! (-{loss_percent:.2f}%). HALTING.")
+        print(f"\n[HALT] DAILY LIMIT HIT! (-{loss_percent:.2f}%). EXECUTING GLOBAL LIQUIDATION...")
+        close_all_positions()
         return False 
     return True
 
