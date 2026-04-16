@@ -148,6 +148,9 @@ def execute_trade(signal, sl_price, risk_pct, magic_num, comment_text, ai_conf=0
         "type_time": mt5.ORDER_TIME_GTC, "type_filling": mt5.ORDER_FILLING_IOC,
     }
     result = mt5.order_send(request)
+    if result is None:
+        print("[ERROR] Order Failed: mt5.order_send returned None (Network Timeout)")
+        return False
     if result.retcode != mt5.TRADE_RETCODE_DONE:
         print(f"[ERROR] Order Failed: {result.comment}")
         return False
@@ -225,7 +228,9 @@ def manage_open_positions():
                     "action": mt5.TRADE_ACTION_SLTP, "position": pos.ticket, 
                     "sl": pos.price_open, "tp": pos.tp, "magic": pos.magic
                 }
-                mt5.order_send(request_sl)
+                res_sl = mt5.order_send(request_sl)
+                if res_sl is None or res_sl.retcode != mt5.TRADE_RETCODE_DONE:
+                    print(f"[WARNING] BE Move Request Failed for Ticket {pos.ticket}")
                 
                 if PARTIAL_CLOSE_PCT > 0:
                     action_type = mt5.ORDER_TYPE_SELL if pos.type == mt5.ORDER_TYPE_BUY else mt5.ORDER_TYPE_BUY
