@@ -46,8 +46,10 @@ def train_vwap_brain():
     print("🧠 Engine computing 3-Year Baseline VWAP distributions...")
     
     # Needs to match vwap_reversion strategy calculation perfectly
-    vwap_line = ta.vwap(df['high'], df['low'], df['close'], df['tick_volume'])
-    df['VWAP'] = vwap_line
+    temp_df = df.copy()
+    temp_df.set_index('time', inplace=True)
+    vwap_line = ta.vwap(temp_df['high'], temp_df['low'], temp_df['close'], temp_df['tick_volume'])
+    df['VWAP'] = vwap_line.values
     diff = df['close'] - df['VWAP']
     std_dev = diff.rolling(window=100).std()
     
