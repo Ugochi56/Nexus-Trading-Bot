@@ -122,12 +122,17 @@ def train_vwap_brain():
     X = anomaly_df[features]
     y = anomaly_df['Target']
     
-    # 80/20 train/test
-    split_idx = int(len(X) * 0.80)
-    X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
-    y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
+    # 70/15/15 Train / Validation / Test
+    train_idx = int(len(X) * 0.70)
+    val_idx = int(len(X) * 0.85)
+
+    X_train, y_train = X.iloc[:train_idx], y.iloc[:train_idx]
+    X_val, y_val = X.iloc[train_idx:val_idx], y.iloc[train_idx:val_idx]
+    X_test, y_test = X.iloc[val_idx:], y.iloc[val_idx:]
 
     print(f"🤖 Training Knife-Catcher AI over {len(X_train)} structural anomalies...")
+    print(f"🔮 Validating Epochs over {len(X_val)} anomalies...")
+    
     model = RandomForestClassifier(
         n_estimators=500, 
         max_depth=10, 
@@ -138,7 +143,9 @@ def train_vwap_brain():
     )
     model.fit(X_train, y_train)
 
-    print("🧪 Simulating unseen Black Swan Crashes...")
+    print("🧪 Simulating unseen Black Swan Crashes (Out-of-Sample Test)...")
+    
+    # Run through the blind Test set to prevent data-leakage evaluation
     test_probs = model.predict_proba(X_test)
     max_probs = np.max(test_probs, axis=1)
     
