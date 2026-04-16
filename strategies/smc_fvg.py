@@ -51,10 +51,9 @@ class SMCStrategy(BaseStrategy):
             
             m15_dir = 'UP' if df_m15.iloc[-1]['close'] > m15_ema else 'DOWN'
             h1_dir = 'UP' if df_h1.iloc[-1]['close'] > h1_ema else 'DOWN'
-            h4_dir = 'UP' if df_h4.iloc[-1]['close'] > h4_ema else 'DOWN'
             
-            if m15_dir == 'UP' and h1_dir == 'UP' and h4_dir == 'UP': return "UP"
-            if m15_dir == 'DOWN' and h1_dir == 'DOWN' and h4_dir == 'DOWN': return "DOWN"
+            if m15_dir == 'UP' and h1_dir == 'UP': return "UP"
+            if m15_dir == 'DOWN' and h1_dir == 'DOWN': return "DOWN"
             return "NEUTRAL"
         except:
             return "NEUTRAL"
