@@ -149,6 +149,8 @@ def train_vwap_brain():
         print("="*50)
         print(f"✅ VETO AI Accuracy Rating: {acc:.2%}")
         print(f"🛡️ Trades Authorized: {len(y_filtered)} / {len(y_test)} (The rest were proactively blocked as Traps)")
+        print("\n📊 Detailed Statistical Profile (F1-Score / Precision / Recall):")
+        print(classification_report(y_filtered, preds, target_names=["Loss (Cascade Death)", "Win (Safe Reversion)"]))
         print("="*50)
         
         model_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), MODEL_FILE)
