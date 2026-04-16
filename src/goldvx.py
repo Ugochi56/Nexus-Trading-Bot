@@ -23,16 +23,21 @@ def load_ai_models():
     try:
         trend = joblib.load(TREND_MODEL_FILE)
         reversal = joblib.load(REVERSAL_MODEL_FILE)
-        return trend, reversal
+        
+        vwap_model = None
+        if os.path.exists(VWAP_MODEL_FILE):
+             vwap_model = joblib.load(VWAP_MODEL_FILE)
+             
+        return trend, reversal, vwap_model
     except Exception as e:
         print(f"[ERROR] Error loading models: {e}")
-        return None, None
+        return None, None, None
 
 def main():
     print("[START] Booting NEXUS Core...")
     connect_mt5()
     
-    trend_model, reversal_model = load_ai_models()
+    trend_model, reversal_model, vwap_model = load_ai_models()
     if trend_model is None:
         print("[CRITICAL] Engine shutting down due to Missing Intelligence (Joblib)")
         sys.exit()
@@ -42,7 +47,7 @@ def main():
         "SMC_FVG": SMCStrategy(trend_model),
         "SMC_OB": SMCOrderBlockStrategy(trend_model),
         "RSI_REVERSION": RSIReversionStrategy(reversal_model),
-        "VWAP_REVERSION": VWAPReversionStrategy(),
+        "VWAP_REVERSION": VWAPReversionStrategy(ai_model=vwap_model),
         "BB_BREAKOUT": BBBreakoutStrategy()
     }
     
