@@ -20,8 +20,8 @@ def fetch_economic_news():
         try:
             with open(cache_file, "r") as f:
                 cached = json.load(f)
-            if cached.get("day") == curr_day:
-                daily_news_data = cached.get("data", [])
+            if cached.get("System Cache Date") == curr_day:
+                daily_news_data = cached.get("Macroeconomic Calendar", [])
                 last_news_fetch_day = curr_day
                 api_failed_lockdown = False
                 print("\n[CACHE] Loaded ForexFactory Calendar from local cache.")
@@ -43,24 +43,47 @@ def fetch_economic_news():
         
         raw_data = response.json()
         
-        # Color code the JSON cache for readability
+        # Completely restructure json to layman terms
         color_map = {
-            "High": "🔴 High (Red Folder)",
-            "Medium": "🟠 Medium (Orange Folder)",
-            "Low": "🟡 Low (Yellow Folder)",
+            "High": "🔴 High Threat Level (Red Folder)",
+            "Medium": "🟠 Medium Threat Level (Orange Folder)",
+            "Low": "🟡 Low Activity (Yellow Folder)",
             "Non": "⚪ Non-Economic"
         }
-        for item in raw_data:
-            orig = item.get("impact", "")
-            item["impact"] = color_map.get(orig, orig)
+        
+        formatted_data = []
+        for e in raw_data:
+            orig_impact = e.get("impact", "")
             
-        daily_news_data = raw_data
+            try:
+                dt = datetime.fromisoformat(e.get('date', ''))
+                human_time = dt.strftime("%A, %B %d, %Y at %I:%M %p")
+            except:
+                human_time = e.get('date', 'Unknown')
+                
+            readable_event = {
+                "Event Name": e.get("title", "Unknown"),
+                "Currency Affected": e.get("country", "Unknown"),
+                "Date and Time": human_time,
+                "Danger Level": color_map.get(orig_impact, orig_impact),
+                "Expected Result (Forecast)": e.get("forecast", ""),
+                "Previous Result": e.get("previous", ""),
+                "_bot_raw_date": e.get("date", ""),
+                "_bot_raw_impact": orig_impact
+            }
+            formatted_data.append(readable_event)
+            
+        daily_news_data = formatted_data
         last_news_fetch_day = curr_day
         api_failed_lockdown = False
         
         os.makedirs("data", exist_ok=True)
         with open(cache_file, "w") as f:
-            json.dump({"day": curr_day, "data": daily_news_data}, f, indent=4)
+            json.dump({
+                "System Cache Date": curr_day, 
+                "Notice": "This file contains the macroeconomic outlook for the entire trading week.",
+                "Macroeconomic Calendar": daily_news_data
+            }, f, indent=4)
             
         print(f"[SUCCESS] News Database Fetched & Cached Successfully.")
     except Exception as e:
@@ -72,10 +95,12 @@ def is_news_blackout():
     if api_failed_lockdown: return True
     
     now_utc = datetime.now(timezone.utc)
+    # The JSON array is cached under "Macroeconomic Calendar" if we read it from disk, 
+    # but 'daily_news_data' is just the array array natively in RAM.
     for event in daily_news_data:
-        if event.get('country') == 'USD' and 'High' in event.get('impact', ''):
+        if event.get('Currency Affected') == 'USD' and event.get('_bot_raw_impact') == 'High':
             try:
-                event_time_utc = datetime.fromisoformat(event.get('date')).astimezone(timezone.utc)
+                event_time_utc = datetime.fromisoformat(event.get('_bot_raw_date')).astimezone(timezone.utc)
                 diff = abs((now_utc - event_time_utc).total_seconds())
                 if diff <= 1800: # 30 mins
                     return True
