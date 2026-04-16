@@ -17,7 +17,6 @@ VOLATILITY_THRESHOLD = 3.0
 USE_AI_FILTER = True
 TREND_MODEL_FILE = "gold_trend_model.joblib"
 REVERSAL_MODEL_FILE = "gold_reversal_model.joblib"
-VWAP_MODEL_FILE = "vwap_anomaly_model.joblib"
 AI_CONFIDENCE_THRESHOLD = 0.55
 
 # 🛡️ 3. DYNAMIC RISK (SESSION BASED)

@@ -6,9 +6,8 @@ import time
 from core.state_manager import nexus_state
 
 class VWAPReversionStrategy(BaseStrategy):
-    def __init__(self, ai_model=None):
+    def __init__(self):
         super().__init__("VWAP_REVERSION")
-        self.vwap_model = ai_model
         self.last_signal_time = None
         self.throttle_timer = 0
         self.sd_multiplier = 3.0  # 3 Standard Deviations for extreme anomaly stretches
@@ -78,25 +77,7 @@ class VWAPReversionStrategy(BaseStrategy):
             r_pct = min(current_risk, 0.5)
             sl_padding = atr * SL_ATR_MULTIPLIER
 
-            if current_price >= upper_band and not self.anomaly_sell_locked:
-                if self.vwap_model and USE_AI_FILTER:
-                    try:
-                        rsi = ta.rsi(df_m5['close'], length=14).iloc[-1]
-                        atr = ta.atr(df_m5['high'], df_m5['low'], df_m5['close'], length=14).iloc[-1]
-                        adx_obj = ta.adx(df_m5['high'], df_m5['low'], df_m5['close'], length=14)
-                        adx = adx_obj['ADX_14'].iloc[-1] if adx_obj is not None else 0
-                        v1 = df_m5['close'].diff(1).iloc[-1]
-                        v3 = df_m5['close'].diff(3).iloc[-1]
-                        c_atr = (df_m5['high'].iloc[-1] - df_m5['low'].iloc[-1]) / atr
-                        features = [[rsi, atr, adx, v1, v3, c_atr]]
-                        
-                        probs = self.vwap_model.predict_proba(features)[0]
-                        if probs[1] < AI_CONFIDENCE_THRESHOLD:
-                            print("\r[VWAP] [AI VETO] Machine Learning predicted cascading continuation past +3.0 SD. Sell Trade blocked.".ljust(90), end='')
-                            return {'payload': None, 'ui': "[VWAP_VETO] CASC"}
-                    except Exception as e:
-                        pass
-                        
+            if current_price >= upper_band and not self.anomaly_sell_locked:                        
                 self.throttle_timer = time.time()
                 self.last_signal_time = last_time
                 self.set_sell_lock(True)
@@ -109,25 +90,7 @@ class VWAPReversionStrategy(BaseStrategy):
                 }
                 print(f"\n[VWAP] [EXTREME VOLUMETRIC STRETCH] (+{self.sd_multiplier} SD). Snapping Back.")
                 
-            elif current_price <= lower_band and not self.anomaly_buy_locked:
-                if self.vwap_model and USE_AI_FILTER:
-                    try:
-                        rsi = ta.rsi(df_m5['close'], length=14).iloc[-1]
-                        atr = ta.atr(df_m5['high'], df_m5['low'], df_m5['close'], length=14).iloc[-1]
-                        adx_obj = ta.adx(df_m5['high'], df_m5['low'], df_m5['close'], length=14)
-                        adx = adx_obj['ADX_14'].iloc[-1] if adx_obj is not None else 0
-                        v1 = df_m5['close'].diff(1).iloc[-1]
-                        v3 = df_m5['close'].diff(3).iloc[-1]
-                        c_atr = (df_m5['high'].iloc[-1] - df_m5['low'].iloc[-1]) / atr
-                        features = [[rsi, atr, adx, v1, v3, c_atr]]
-                        
-                        probs = self.vwap_model.predict_proba(features)[0]
-                        if probs[1] < AI_CONFIDENCE_THRESHOLD:
-                            print("\r[VWAP] [AI VETO] Machine Learning predicted cascading crash past -3.0 SD. Knife-Catch blocked.".ljust(90), end='')
-                            return {'payload': None, 'ui': "[VWAP_VETO] CASC"}
-                    except Exception as e:
-                        pass
-                        
+            elif current_price <= lower_band and not self.anomaly_buy_locked:                        
                 self.throttle_timer = time.time()
                 self.last_signal_time = last_time
                 self.set_buy_lock(True)
