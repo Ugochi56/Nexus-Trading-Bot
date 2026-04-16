@@ -87,25 +87,28 @@ def train_vwap_brain():
     print("⚖️ Structuring Deep Labeling Results (Success vs Cascade Death)...")
     
     labels = []
-    # Loop over the actual indices from the original dataframe where anomaly occurred
     for idx in anomaly_df.index:
         trigger_type = anomaly_df.loc[idx, 'Anomaly_Trigger']
         vwap_baseline = anomaly_df.loc[idx, 'VWAP']
         trigger_price = anomaly_df.loc[idx, 'close']
+        trigger_atr = anomaly_df.loc[idx, 'ATR']
         
-        # Look ahead exactly 10 candles structurally to see if it safely reverted or crashed further
-        max_idx = min(idx + 10, len(df))
+        # Look ahead 36 candles (3 hours) to safely observe the physics of a mean-reverting snap
+        max_idx = min(idx + 36, len(df))
         future_window = df.loc[idx+1 : max_idx]
         
-        if trigger_type == 1:  # Buy Anomaly
-            # Target 1 = Success (Price reaches VWAP baseline)
-            # Target 0 = Failed Knife (Price drops another 1 ATR into a cascade)
-            if future_window['high'].max() >= vwap_baseline:
+        if trigger_type == 1:  # Buy Anomaly (-3.0 SD)
+            # Target 1 = Success: The price safely bounced upward by at least 1.5x ATR (Scalp Bag Secured)
+            # Target 0 = Failure: The price crashed further downward by 1.0x ATR before ever bouncing
+            if future_window['high'].max() >= trigger_price + (trigger_atr * 1.5):
                 labels.append(1)
             else:
                 labels.append(0)
-        elif trigger_type == -1: # Sell Anomaly
-            if future_window['low'].min() <= vwap_baseline:
+                
+        elif trigger_type == -1: # Sell Anomaly (+3.0 SD)
+            # Target 1 = Success: The price safely collapsed downward by at least 1.5x ATR
+            # Target 0 = Failure: The price ripped further upward by 1.0x ATR before dropping
+            if future_window['low'].min() <= trigger_price - (trigger_atr * 1.5):
                 labels.append(1)
             else:
                 labels.append(0)
