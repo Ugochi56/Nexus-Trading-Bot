@@ -28,14 +28,17 @@ def check_daily_drawdown():
     account = mt5.account_info()
     if not account: return False
     
-    current_day = datetime.now().day
-    cached_day = nexus_state.get('last_day_checked', -1)
+    rates = mt5.copy_rates_from_pos(SYMBOL, mt5.TIMEFRAME_D1, 0, 1)
+    if rates is None or len(rates) == 0: return False
     
-    if current_day != cached_day:
+    current_d1_time = int(rates[0]['time'])
+    cached_d1_time = nexus_state.get('last_d1_time', -1)
+    
+    if current_d1_time != cached_d1_time:
         nexus_state.set('daily_start_equity', account.equity)
-        nexus_state.set('last_day_checked', current_day)
+        nexus_state.set('last_d1_time', current_d1_time)
         nexus_state.set('is_halted', False)
-        print(f"\n[DAY] New Day Equity: ${account.equity:.2f} (Written to Drive)")
+        print(f"\n[DAY] New Broker Day! Equity: ${account.equity:.2f} (Synced to MT5 Clock)")
         return True
         
     if nexus_state.get('is_halted', False):
