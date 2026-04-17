@@ -49,7 +49,7 @@ def check_daily_drawdown():
     if loss_percent >= MAX_DAILY_LOSS_PERCENT:
         print(f"\n[HALT] DAILY LIMIT HIT! (-{loss_percent:.2f}%). EXECUTING GLOBAL LIQUIDATION...")
         nexus_state.set('is_halted', True)
-        close_all_positions()
+        close_all_positions(reason="DAILY_LIMIT_REACHED")
         return False 
     return True
 
@@ -260,7 +260,7 @@ def manage_open_positions():
                     req = {"action": mt5.TRADE_ACTION_SLTP, "position": pos.ticket, "sl": new_sl, "tp": pos.tp, "magic": pos.magic}
                     mt5.order_send(req)
 
-def close_all_positions():
+def close_all_positions(reason="FRIDAY_PROTOCOL"):
     if DRY_RUN:
         virtual_positions.clear()
         print("\n[LIQUIDATED] DRY_RUN: All Virtual Positions Liquidated.")
@@ -276,9 +276,9 @@ def close_all_positions():
         request = {
             "action": mt5.TRADE_ACTION_DEAL, "symbol": SYMBOL, "volume": pos.volume, 
             "type": action_type, "position": pos.ticket, "price": price, 
-            "deviation": DEVIATION, "magic": MAGIC_NUMBER, "comment": "FRIDAY_KILL",
+            "deviation": DEVIATION, "magic": MAGIC_NUMBER, "comment": reason,
             "type_time": mt5.ORDER_TIME_GTC, "type_filling": mt5.ORDER_FILLING_IOC,
         }
         res = mt5.order_send(request)
         if res and res.retcode == mt5.TRADE_RETCODE_DONE:
-            print(f"\n[CLOSED] Ticket #{pos.ticket} (Friday Protocol)")
+            print(f"\n[CLOSED] Ticket #{pos.ticket} ({reason})")
