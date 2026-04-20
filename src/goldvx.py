@@ -154,14 +154,9 @@ def main():
             regime_icon = "[NEUTRAL]"
             active_strats = ["SMC_FVG", "SMC_OB"]
             if AUTO_SWITCH:
-                if current_session == "NY_LONDON_OVERLAP":
-                    active_strats = ["FLAT"]; regime_icon = "[FLAT]"
-                elif current_session in ["LONDON", "NEW_YORK"]:
-                     active_strats = ["SMC_FVG", "SMC_OB", "BB_BREAKOUT", "VWAP_REVERSION"]; regime_icon = "[HOT]" 
-                else:
-                    if curr_adx > ADX_TREND_START: active_strats = ["SMC_FVG", "SMC_OB", "BB_BREAKOUT"]; regime_icon = "[TREND]"
-                    elif curr_adx < ADX_RANGE_START: active_strats = ["RSI_REVERSION", "VWAP_REVERSION"]; regime_icon = "[RANGE]"
-                    else: active_strats = ["RSI_REVERSION", "VWAP_REVERSION", "BB_BREAKOUT"]; regime_icon = "[NEUTRAL]"
+                if curr_adx > ADX_TREND_START: active_strats = ["SMC_FVG", "SMC_OB", "BB_BREAKOUT"]; regime_icon = "[TREND]"
+                elif curr_adx < ADX_RANGE_START: active_strats = ["RSI_REVERSION", "VWAP_REVERSION"]; regime_icon = "[RANGE]"
+                else: active_strats = ["RSI_REVERSION", "VWAP_REVERSION", "BB_BREAKOUT"]; regime_icon = "[NEUTRAL]"
 
             curr_strats_str = ",".join(active_strats)
             if curr_strats_str != prev_strats_str:
