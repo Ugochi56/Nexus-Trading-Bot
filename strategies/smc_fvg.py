@@ -47,13 +47,14 @@ class SMCStrategy(BaseStrategy):
         try:
             m15_ema = df_m15['close'].ewm(span=50, adjust=False).mean().iloc[-1]
             h1_ema = df_h1['close'].ewm(span=50, adjust=False).mean().iloc[-1]
-            h4_ema = df_h4['close'].ewm(span=50, adjust=False).mean().iloc[-1]
+            h4_ema200 = df_h4['close'].ewm(span=200, adjust=False).mean().iloc[-1]
             
             m15_dir = 'UP' if df_m15.iloc[-1]['close'] > m15_ema else 'DOWN'
             h1_dir = 'UP' if df_h1.iloc[-1]['close'] > h1_ema else 'DOWN'
+            h4_dir = 'UP' if df_h4.iloc[-1]['close'] > h4_ema200 else 'DOWN'
             
-            if m15_dir == 'UP' and h1_dir == 'UP': return "UP"
-            if m15_dir == 'DOWN' and h1_dir == 'DOWN': return "DOWN"
+            if m15_dir == 'UP' and h1_dir == 'UP' and h4_dir == 'UP': return "UP"
+            if m15_dir == 'DOWN' and h1_dir == 'DOWN' and h4_dir == 'DOWN': return "DOWN"
             return "NEUTRAL"
         except:
             return "NEUTRAL"
@@ -115,7 +116,7 @@ class SMCStrategy(BaseStrategy):
             action_msg = f"[WATCH] {self.active_fvg['type']}"
             if self.active_fvg['type'] == 'BUY':
                 if current_price < self.active_fvg['bottom']: 
-                    print(f"\n[SMC] [ZONE BROKEN]: BUY {self.active_fvg['bottom']:.2f}-{self.active_fvg['top']:.2f}")
+                    print(f"[SMC] [ZONE BROKEN]: BUY {self.active_fvg['bottom']:.2f}-{self.active_fvg['top']:.2f}")
                     self.active_fvg = None
                 
                 elif current_price <= self.active_fvg['top'] and (time.time() - self.ai_throttle_timer > 3.0):
@@ -138,13 +139,16 @@ class SMCStrategy(BaseStrategy):
                         else:
                             if ai_verdict == 'SELL': reason = "Predicts trend reversal (DOWN)"
                             else: reason = f"Uncertain market (Score < {AI_CONFIDENCE_THRESHOLD})"
-                            print(f"\n[SMC] [AI DENIED BUY] ({ai_conf:.2f}) -> Reason: {reason}")
+                            spam_key = f"BUY_{self.active_fvg['bottom']}_{reason}"
+                            if getattr(self, 'last_spam', '') != spam_key:
+                                print(f"[SMC] [AI DENIED BUY] ({ai_conf:.2f}) -> Reason: {reason}")
+                                self.last_spam = spam_key
                             self.last_denied_fvg_time = self.active_fvg['time']
                             self.active_fvg = None 
 
             elif self.active_fvg['type'] == 'SELL':
                 if current_price > self.active_fvg['top']: 
-                    print(f"\n[SMC] [ZONE BROKEN]: SELL {self.active_fvg['bottom']:.2f}-{self.active_fvg['top']:.2f}")
+                    print(f"[SMC] [ZONE BROKEN]: SELL {self.active_fvg['bottom']:.2f}-{self.active_fvg['top']:.2f}")
                     self.active_fvg = None
                     
                 elif current_price >= self.active_fvg['bottom'] and (time.time() - self.ai_throttle_timer > 3.0):
@@ -167,7 +171,10 @@ class SMCStrategy(BaseStrategy):
                         else:
                             if ai_verdict == 'BUY': reason = "Predicts trend reversal (UP)"
                             else: reason = f"Uncertain market (Score < {AI_CONFIDENCE_THRESHOLD})"
-                            print(f"\n[SMC] [AI DENIED SELL] ({ai_conf:.2f}) -> Reason: {reason}")
+                            spam_key = f"SELL_{self.active_fvg['top']}_{reason}"
+                            if getattr(self, 'last_spam', '') != spam_key:
+                                print(f"[SMC] [AI DENIED SELL] ({ai_conf:.2f}) -> Reason: {reason}")
+                                self.last_spam = spam_key
                             self.last_denied_fvg_time = self.active_fvg['time']
                             self.active_fvg = None
 

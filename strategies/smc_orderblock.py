@@ -59,11 +59,16 @@ class SMCOrderBlockStrategy(BaseStrategy):
         except Exception as e:
             return 'SKIP_CHECK', 0.0
 
-    def get_trend_direction(self, df_trend):
-        ema_50 = df_trend['close'].ewm(span=50, adjust=False).mean().iloc[-1]
-        close = df_trend.iloc[-1]['close']
-        if close > ema_50: return 'UP'
-        if close < ema_50: return 'DOWN'
+    def get_trend_direction(self, df_h1, df_h4):
+        if df_h4 is None or df_h1 is None: return 'FLAT'
+        h1_ema_50 = df_h1['close'].ewm(span=50, adjust=False).mean().iloc[-1]
+        h4_ema_200 = df_h4['close'].ewm(span=200, adjust=False).mean().iloc[-1]
+        
+        h1_close = df_h1.iloc[-1]['close']
+        h4_close = df_h4.iloc[-1]['close']
+        
+        if h1_close > h1_ema_50 and h4_close > h4_ema_200: return 'UP'
+        if h1_close < h1_ema_50 and h4_close < h4_ema_200: return 'DOWN'
         return 'FLAT'
 
     def find_order_block(self, df):
@@ -79,17 +84,29 @@ class SMCOrderBlockStrategy(BaseStrategy):
         highest_high = recent_chunk['high'].max()
         lowest_low = recent_chunk['low'].min()
         
+        # Momentum Metric calculation
+        atr = df['high'].iloc[-14:] - df['low'].iloc[-14:]
+        avg_candle_size = atr.mean()
+        
         ob = None
 
         # BULLISH BOS (Price breaks recent High)
         if current_candle['close'] > highest_high * 0.9995: 
+            # 1. Momentum Validation: Impulse leg must be explosive (1.5x average size)
+            if (current_candle['high'] - current_candle['low']) < (avg_candle_size * 1.5):
+                return None 
+                
             # Find the last Bearish (Red) candle before this impulse
             for i in range(len(df)-2, len(df) - 15, -1):
-                if df.iloc[i]['close'] < df.iloc[i]['open']: # It's a Red Candle
+                if df.iloc[i]['close'] < df.iloc[i]['open']:
+                    # 2. Zone Expansion: Pad block structurally encompassing previous tick
+                    zone_high = max(df.iloc[i]['high'], df.iloc[i-1]['high'])
+                    zone_low = min(df.iloc[i]['low'], df.iloc[i-1]['low'])
+                    
                     ob = {
                         'type': 'BUY',
-                        'top': df.iloc[i]['high'],
-                        'bottom': df.iloc[i]['low'],
+                        'top': zone_high,
+                        'bottom': zone_low,
                         'time': df.iloc[i]['time'],
                         'bos_time': current_candle['time']
                     }
@@ -97,13 +114,21 @@ class SMCOrderBlockStrategy(BaseStrategy):
 
         # BEARISH BOS (Price breaks recent Low)
         elif current_candle['close'] < lowest_low * 1.0005:
+            # Momentum Validation
+            if (current_candle['high'] - current_candle['low']) < (avg_candle_size * 1.5):
+                return None
+                
             # Find the last Bullish (Green) candle before this impulse
             for i in range(len(df)-2, len(df) - 15, -1):
-                if df.iloc[i]['close'] > df.iloc[i]['open']: # It's a Green Candle
+                if df.iloc[i]['close'] > df.iloc[i]['open']:
+                    # Zone Expansion
+                    zone_high = max(df.iloc[i]['high'], df.iloc[i-1]['high'])
+                    zone_low = min(df.iloc[i]['low'], df.iloc[i-1]['low'])
+                    
                     ob = {
                         'type': 'SELL',
-                        'top': df.iloc[i]['high'],
-                        'bottom': df.iloc[i]['low'],
+                        'top': zone_high,
+                        'bottom': zone_low,
                         'time': df.iloc[i]['time'],
                         'bos_time': current_candle['time']
                     }
@@ -112,7 +137,7 @@ class SMCOrderBlockStrategy(BaseStrategy):
         return None
 
     def evaluate(self, df_m5, df_h1, df_h4, df_adx, current_price, current_risk, atr, **kwargs):
-        trend = self.get_trend_direction(df_h1)
+        trend = self.get_trend_direction(df_h1, df_h4)
         signal_payload = None
         action_msg = f"[OB_SCAN] {trend}"
         
@@ -127,7 +152,7 @@ class SMCOrderBlockStrategy(BaseStrategy):
                 self.active_obs.append(new_ob)
                 if len(self.active_obs) > self.max_obs:
                     self.active_obs.pop(0)
-                print(f"\n[OB] [FRESH ORDER BLOCK]: {new_ob['type']} {new_ob['bottom']:.2f}-{new_ob['top']:.2f}")
+                print(f"[OB] [FRESH ORDER BLOCK]: {new_ob['type']} {new_ob['bottom']:.2f}-{new_ob['top']:.2f}")
 
         if self.active_obs:
             action_msg = f"[OB_WATCH] {len(self.active_obs)} Active Block(s)"
@@ -138,7 +163,7 @@ class SMCOrderBlockStrategy(BaseStrategy):
                 
                 if ob['type'] == 'BUY':
                     if current_price < ob['bottom']: 
-                        print(f"\n[OB] [BLOCK INVALIDATED]: BUY {ob['bottom']:.2f} Penetrated/Mitigated.")
+                        print(f"[OB] [BLOCK INVALIDATED]: BUY {ob['bottom']:.2f} Penetrated/Mitigated.")
                         is_valid = False
                     
                     elif current_price <= ob['top'] and (time.time() - self.ai_throttle_timer > 3.0):
@@ -153,11 +178,14 @@ class SMCOrderBlockStrategy(BaseStrategy):
                         else:
                             if ai_verdict == 'SELL': reason = "Predicts trend reversal (DOWN)"
                             else: reason = f"Uncertain market (Score < {AI_CONFIDENCE_THRESHOLD})"
-                            print(f"\n[OB] [AI DENIED OB BUY] ({ai_conf:.2f}) -> {reason}")
+                            spam_key = f"BUY_{ob['bottom']}_{reason}"
+                            if getattr(self, 'last_spam', '') != spam_key:
+                                print(f"[OB] [AI DENIED OB BUY] ({ai_conf:.2f}) -> {reason}")
+                                self.last_spam = spam_key
 
                 elif ob['type'] == 'SELL':
                     if current_price > ob['top']: 
-                        print(f"\n[OB] [BLOCK INVALIDATED]: SELL {ob['top']:.2f} Penetrated/Mitigated.")
+                        print(f"[OB] [BLOCK INVALIDATED]: SELL {ob['top']:.2f} Penetrated/Mitigated.")
                         is_valid = False
                         
                     elif current_price >= ob['bottom'] and (time.time() - self.ai_throttle_timer > 3.0):
@@ -172,7 +200,10 @@ class SMCOrderBlockStrategy(BaseStrategy):
                         else:
                             if ai_verdict == 'BUY': reason = "Predicts trend reversal (UP)"
                             else: reason = f"Uncertain market (Score < {AI_CONFIDENCE_THRESHOLD})"
-                            print(f"\n[OB] [AI DENIED OB SELL] ({ai_conf:.2f}) -> {reason}")
+                            spam_key = f"SELL_{ob['top']}_{reason}"
+                            if getattr(self, 'last_spam', '') != spam_key:
+                                print(f"[OB] [AI DENIED OB SELL] ({ai_conf:.2f}) -> {reason}")
+                                self.last_spam = spam_key
                 
                 if is_valid:
                     valid_obs.append(ob)
