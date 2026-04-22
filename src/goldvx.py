@@ -17,6 +17,7 @@ from strategies.rsi_reversion import RSIReversionStrategy
 from strategies.smc_orderblock import SMCOrderBlockStrategy
 from strategies.vwap_reversion import VWAPReversionStrategy
 from strategies.bb_breakout import BBBreakoutStrategy
+from strategies.london_breakout import LondonBreakoutStrategy
 import MetaTrader5 as mt5
 
 def load_ai_models():
@@ -43,7 +44,8 @@ def main():
         "SMC_OB": SMCOrderBlockStrategy(trend_model),
         "RSI_REVERSION": RSIReversionStrategy(reversal_model),
         "VWAP_REVERSION": VWAPReversionStrategy(),
-        "BB_BREAKOUT": BBBreakoutStrategy()
+        "BB_BREAKOUT": BBBreakoutStrategy(),
+        "LONDON_BREAKOUT": LondonBreakoutStrategy(trend_model)
     }
     
     last_eval_time = 0 
@@ -157,6 +159,9 @@ def main():
                 if curr_adx > ADX_TREND_START: active_strats = ["SMC_FVG", "SMC_OB", "BB_BREAKOUT"]; regime_icon = "[TREND]"
                 elif curr_adx < ADX_RANGE_START: active_strats = ["RSI_REVERSION", "VWAP_REVERSION"]; regime_icon = "[RANGE]"
                 else: active_strats = ["RSI_REVERSION", "VWAP_REVERSION", "BB_BREAKOUT"]; regime_icon = "[NEUTRAL]"
+
+            if KILLZONE_EXEC_START <= server_hour < KILLZONE_EXEC_END:
+                active_strats.append("LONDON_BREAKOUT")
 
             curr_strats_str = ",".join(active_strats)
             if curr_strats_str != prev_strats_str:
