@@ -55,12 +55,6 @@ MOVE_BE = True
 BE_TRIGGER_PCT = 0.5
 PARTIAL_CLOSE_PCT = 0.5
 
-# 📌 7. PENDING ORDER SETTINGS
-# If True: bot places Buy Limit / Sell Limit at the zone boundary instead of market orders.
-# The pending order expires automatically after PENDING_ORDER_EXPIRY_BARS M5 candles.
-USE_PENDING_ORDERS = True
-PENDING_ORDER_EXPIRY_BARS = 12  # 12 x M5 = 1 Hour TTL before auto-cancel
-
 # 🌍 7. TIMEZONE & DST SETTINGS
 AUTO_DST_ADJUST = True
 DST_SHIFT_HOURS = 1      
