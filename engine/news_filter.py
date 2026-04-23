@@ -98,7 +98,14 @@ def is_news_blackout():
     # The JSON array is cached under "Macroeconomic Calendar" if we read it from disk, 
     # but 'daily_news_data' is just the array array natively in RAM.
     for event in daily_news_data:
-        if event.get('Currency Affected') == 'USD' and event.get('_bot_raw_impact') == 'High':
+        impact = event.get('_bot_raw_impact')
+        currency = event.get('Currency Affected')
+        
+        # Gold Sensitivity Filter
+        is_critical = (currency == 'USD' and impact in ['High', 'Medium']) or \
+                      (currency == 'ALL' and impact == 'High')
+
+        if is_critical:
             try:
                 event_time_utc = datetime.fromisoformat(event.get('_bot_raw_date')).astimezone(timezone.utc)
                 diff = abs((now_utc - event_time_utc).total_seconds())

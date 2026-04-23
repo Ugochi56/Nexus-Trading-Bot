@@ -117,7 +117,7 @@ def main():
             if not is_safe: time.sleep(1); continue
             
             if is_news_blackout():
-                print(f"\r[SLEEP] RED NEWS BLACKOUT ACTIVE".ljust(90), end='')
+                print(f"\r[SLEEP] MACRO NEWS BLACKOUT ACTIVE".ljust(90), end='')
                 for strat in strategies.values(): strat.reset()
                 time.sleep(10); continue
                 
