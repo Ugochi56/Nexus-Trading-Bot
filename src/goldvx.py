@@ -105,8 +105,9 @@ def main():
                     if not is_safe:
                         curr_min = datetime.now().minute
                         if curr_min != last_heartbeat_min:
-                            print(f"\n[HALT] WAR MODE: Volatility {vol_ratio:.1f}x. EXECUTION HALTED (Ghost Scan Active).")
+                            print(f"\n[HALT] WAR MODE: Volatility {vol_ratio:.1f}x. HALTED.")
                             last_heartbeat_min = curr_min
+                        continue
 
                     current_atr = calculate_atr_simple(df_m5, 14)
                     df_m5['rsi'] = calculate_rsi_simple(df_m5['close'], RSI_PERIOD)
@@ -114,12 +115,12 @@ def main():
                     curr_adx = calculate_adx_simple(df_adx, ADX_PERIOD).iloc[-1]
 
             if df_m5 is None or df_h1 is None or df_h4 is None: time.sleep(1); continue
-            is_news_blocked = is_news_blackout()
-            if is_news_blocked:
-                curr_min = datetime.now().minute
-                if curr_min != last_heartbeat_min:
-                    print(f"\r[SLEEP] MACRO NEWS BLACKOUT ACTIVE (Ghost Scan Active)".ljust(90), end='')
-                    last_heartbeat_min = curr_min
+            if not is_safe: time.sleep(1); continue
+            
+            if is_news_blackout():
+                print(f"\r[SLEEP] MACRO NEWS BLACKOUT ACTIVE".ljust(90), end='')
+                for strat in strategies.values(): strat.reset()
+                time.sleep(10); continue
                 
             server_time = datetime.fromtimestamp(tick.time)
             server_hour = server_time.hour
@@ -189,19 +190,15 @@ def main():
                         
                         if payload:
                             r_pct = payload.get('risk_override', current_risk)
-                            if is_safe and not is_news_blocked:
-                                execute_trade(
-                                    signal=payload['signal'], 
-                                    sl_price=payload['sl'], 
-                                    risk_pct=r_pct, 
-                                    magic_num=MAGIC_NUMBER, 
-                                    comment_text=payload['comment'], 
-                                    ai_conf=payload['confidence'],
-                                    limit_price=payload.get('limit_price')
-                                )
-                            else:
-                                reason = "VOLATILITY" if not is_safe else "NEWS"
-                                print(f"\n[GHOST] {payload['signal']} SETUP FOUND ({payload['comment']}) | Trigger blocked by {reason} safety guard.")
+                            execute_trade(
+                                signal=payload['signal'], 
+                                sl_price=payload['sl'], 
+                                risk_pct=r_pct, 
+                                magic_num=MAGIC_NUMBER, 
+                                comment_text=payload['comment'], 
+                                ai_conf=payload['confidence'],
+                                limit_price=payload.get('limit_price')
+                            )
 
             print(f"{status_base.ljust(90)}", end='')
                 
