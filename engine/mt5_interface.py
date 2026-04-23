@@ -111,7 +111,7 @@ def calculate_position_size(entry_price, sl_price, risk_pct):
     lots = round(lots / step) * step
     return max(symbol_info.volume_min, min(lots, symbol_info.volume_max))
 
-def execute_trade(signal, sl_price, risk_pct, magic_num, comment_text, ai_conf=0.55):
+def execute_trade(signal, sl_price, risk_pct, magic_num, comment_text, ai_conf=0.55, limit_price=None):
     global virtual_ticket_counter
     
     if DYNAMIC_RISK:
@@ -120,12 +120,19 @@ def execute_trade(signal, sl_price, risk_pct, magic_num, comment_text, ai_conf=0
 
     if risk_pct <= 0: return False
     tick = mt5.symbol_info_tick(SYMBOL)
-    price = tick.ask if signal == 'BUY' else tick.bid
+    
+    # Pending order mode: snap entry to zone edge passed from strategy
+    if USE_PENDING_ORDERS and limit_price is not None:
+        price = limit_price
+    else:
+        price = tick.ask if signal == 'BUY' else tick.bid
+        
     lots = calculate_position_size(price, sl_price, risk_pct)
     risk_dist = abs(price - sl_price)
     tp = price + (risk_dist * RISK_REWARD_RATIO) if signal == 'BUY' else price - (risk_dist * RISK_REWARD_RATIO)
     
-    print(f"\n[EXEC] ({comment_text}) | Risk {risk_pct:.2f}%")
+    order_mode = "LIMIT" if (USE_PENDING_ORDERS and limit_price is not None) else "MARKET"
+    print(f"\n[EXEC] ({comment_text}) | Mode: {order_mode} | Risk {risk_pct:.2f}%")
     print(f"       Entry: {price:.2f} | SL: {sl_price:.2f} | TP: {tp:.2f} | Lots: {lots}")
     
     if DRY_RUN:
@@ -143,6 +150,31 @@ def execute_trade(signal, sl_price, risk_pct, magic_num, comment_text, ai_conf=0
         print(f"[VIRTUAL] ORDER PLACED! Ticket: {virtual_ticket_counter}")
         return True
     
+    # --- PENDING LIMIT ORDER MODE ---
+    if USE_PENDING_ORDERS and limit_price is not None:
+        if signal == 'BUY':
+            pending_type = mt5.ORDER_TYPE_BUY_LIMIT
+        else:
+            pending_type = mt5.ORDER_TYPE_SELL_LIMIT
+        
+        request = {
+            "action": mt5.TRADE_ACTION_PENDING, "symbol": SYMBOL, "volume": lots,
+            "type": pending_type, "price": price,
+            "sl": sl_price, "tp": tp, "deviation": DEVIATION,
+            "magic": magic_num, "comment": comment_text,
+            "type_time": mt5.ORDER_TIME_GTC, "type_filling": mt5.ORDER_FILLING_RETURN,
+        }
+        result = mt5.order_send(request)
+        if result is None:
+            print("[ERROR] Pending Order Failed: mt5.order_send returned None")
+            return False
+        if result.retcode != mt5.TRADE_RETCODE_DONE:
+            print(f"[ERROR] Pending Order Failed: {result.comment}")
+            return False
+        print(f"[PENDING] LIMIT ORDER PLACED! Ticket: {result.order}")
+        return True
+    
+    # --- INSTANT MARKET ORDER MODE ---
     request = {
         "action": mt5.TRADE_ACTION_DEAL, "symbol": SYMBOL, "volume": lots, 
         "type": mt5.ORDER_TYPE_BUY if signal == 'BUY' else mt5.ORDER_TYPE_SELL,
@@ -159,6 +191,35 @@ def execute_trade(signal, sl_price, risk_pct, magic_num, comment_text, ai_conf=0
         return False
     print(f"[TRADE] ORDER PLACED! Ticket: {result.order}")
     return True
+
+def manage_pending_orders():
+    """Scans all pending orders placed by NEXUS and cancels any that have exceeded
+    their PENDING_ORDER_EXPIRY_BARS TTL threshold to prevent stale fills."""
+    if not USE_PENDING_ORDERS or DRY_RUN: return
+    
+    orders = mt5.orders_get(symbol=SYMBOL)
+    if not orders: return
+    
+    now = datetime.utcnow()
+    expiry_seconds = PENDING_ORDER_EXPIRY_BARS * 5 * 60  # M5 candles -> seconds
+    
+    for order in orders:
+        if order.magic != MAGIC_NUMBER: continue
+        
+        # MT5 time_setup is UNIX timestamp
+        order_age_seconds = (now - datetime.utcfromtimestamp(order.time_setup)).total_seconds()
+        
+        if order_age_seconds > expiry_seconds:
+            cancel_request = {
+                "action": mt5.TRADE_ACTION_REMOVE,
+                "order": order.ticket,
+                "magic": MAGIC_NUMBER,
+            }
+            res = mt5.order_send(cancel_request)
+            if res and res.retcode == mt5.TRADE_RETCODE_DONE:
+                print(f"[EXPIRED] Pending Ticket #{order.ticket} cancelled (TTL: {PENDING_ORDER_EXPIRY_BARS} bars)")
+            else:
+                print(f"[WARNING] Failed to cancel expired pending order #{order.ticket}")
 
 def manage_open_positions():
     if DRY_RUN:

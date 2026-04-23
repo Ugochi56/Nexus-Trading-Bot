@@ -172,7 +172,7 @@ class SMCOrderBlockStrategy(BaseStrategy):
                         
                         if ai_verdict == 'BUY':
                             structural_sl = ob['bottom'] - spread_padding
-                            signal_payload = {'signal': 'BUY', 'sl': structural_sl, 'confidence': ai_conf, 'comment': f"OB AI:{ai_conf:.2f}"}
+                            signal_payload = {'signal': 'BUY', 'sl': structural_sl, 'confidence': ai_conf, 'comment': f"OB AI:{ai_conf:.2f}", 'limit_price': ob['top']}
                             self.last_traded_ob_time = ob['time']
                             is_valid = False 
                         else:
@@ -194,7 +194,7 @@ class SMCOrderBlockStrategy(BaseStrategy):
                         
                         if ai_verdict == 'SELL':
                             structural_sl = ob['top'] + spread_padding
-                            signal_payload = {'signal': 'SELL', 'sl': structural_sl, 'confidence': ai_conf, 'comment': f"OB AI:{ai_conf:.2f}"}
+                            signal_payload = {'signal': 'SELL', 'sl': structural_sl, 'confidence': ai_conf, 'comment': f"OB AI:{ai_conf:.2f}", 'limit_price': ob['bottom']}
                             self.last_traded_ob_time = ob['time']
                             is_valid = False
                         else:
