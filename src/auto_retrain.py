@@ -13,7 +13,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.config import *
 
 MODEL_FILE = "gold_trend_model.joblib"
-HISTORIC_BARS = 20000
+HISTORIC_BARS = 200000
 
 def get_ml_data(symbol, timeframe, n):
     rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, n)
@@ -39,7 +39,7 @@ def train_trend_brain(df_raw):
     # 1 if price went UP, 0 if price went DOWN
     df['Target'] = np.where(df['Future_Close'] > df['close'], 1, 0)
     
-    features = ['Dist_EMA_50', 'Dist_EMA_200', 'Dist_H1', 'RSI', 'RSI_Zone', 'Rel_Volatility', 'ADX']
+    features = ['Dist_EMA_50', 'Dist_EMA_200', 'Dist_H1', 'RSI', 'RSI_Zone', 'Rel_Volatility', 'ADX', 'H1_RSI', 'H4_ADX']
     
     X = df[features]
     y = df['Target']
@@ -126,7 +126,7 @@ def train_reversal_brain(df_raw):
             else: labels.append(0)
             
     anomaly_df['Target'] = labels
-    features = ['Dist_EMA_50', 'Dist_EMA_200', 'Dist_H1', 'RSI', 'Rel_Volatility', 'ADX']
+    features = ['Dist_EMA_50', 'Dist_EMA_200', 'Dist_H1', 'RSI', 'Rel_Volatility', 'ADX', 'H1_RSI', 'H4_ADX']
     
     X = anomaly_df[features]
     y = anomaly_df['Target']
@@ -170,26 +170,53 @@ def train_autonomous_brain():
         return
         
     print(f"📥 Downloading latest {HISTORIC_BARS} M5 candles from Broker...")
-    df = get_ml_data(SYMBOL, mt5.TIMEFRAME_M5, HISTORIC_BARS)
-    if df is None:
+    df_m5 = get_ml_data(SYMBOL, mt5.TIMEFRAME_M5, HISTORIC_BARS)
+    
+    print(f"📥 Downloading macro data (H1, H4)...")
+    df_h1 = get_ml_data(SYMBOL, mt5.TIMEFRAME_H1, HISTORIC_BARS // 12 + 100)
+    df_h4 = get_ml_data(SYMBOL, mt5.TIMEFRAME_H4, HISTORIC_BARS // 48 + 100)
+    
+    if df_m5 is None or df_h1 is None or df_h4 is None:
         print("❌ Failed to pull data.")
         mt5.shutdown()
         return
 
     import pandas_ta as ta
-    df['EMA_50'] = df.ta.ema(length=50)
-    df['EMA_200'] = df.ta.ema(length=200)
-    df['EMA_H1_Proxy'] = df.ta.ema(length=600)
-    df['RSI'] = df.ta.rsi(length=14)
-    df['ATR'] = df.ta.atr(length=14)
-    adx = df.ta.adx(length=14)
-    df['ADX'] = adx['ADX_14']
+    
+    # Calculate M5 features
+    df_m5['EMA_50'] = df_m5.ta.ema(length=50)
+    df_m5['EMA_200'] = df_m5.ta.ema(length=200)
+    df_m5['RSI'] = df_m5.ta.rsi(length=14)
+    df_m5['ATR'] = df_m5.ta.atr(length=14)
+    adx_m5 = df_m5.ta.adx(length=14)
+    if adx_m5 is not None: df_m5['ADX'] = adx_m5['ADX_14']
+    else: df_m5['ADX'] = 0
+    
+    # Calculate H1 features
+    df_h1['H1_RSI'] = df_h1.ta.rsi(length=14)
+    df_h1['H1_EMA_50'] = df_h1.ta.ema(length=50)
+    
+    # Calculate H4 features
+    adx_h4 = df_h4.ta.adx(length=14)
+    if adx_h4 is not None: df_h4['H4_ADX'] = adx_h4['ADX_14']
+    else: df_h4['H4_ADX'] = 0
+    df_h4['H4_EMA_200'] = df_h4.ta.ema(length=200)
+    
+    # Select only what we need to merge
+    df_h1_subset = df_h1[['time', 'H1_RSI', 'H1_EMA_50']].dropna()
+    df_h4_subset = df_h4[['time', 'H4_ADX', 'H4_EMA_200']].dropna()
+    
+    # Merge AsOf (matching exactly or earlier)
+    print("🔄 Merging Multi-Dimensional Macro Arrays...")
+    df = pd.merge_asof(df_m5, df_h1_subset, on='time', direction='backward')
+    df = pd.merge_asof(df, df_h4_subset, on='time', direction='backward')
     
     df['Dist_EMA_50'] = (df['close'] - df['EMA_50']) / df['close']
     df['Dist_EMA_200'] = (df['close'] - df['EMA_200']) / df['close']
-    df['Dist_H1'] = (df['close'] - df['EMA_H1_Proxy']) / df['close']
+    df['Dist_H1'] = (df['close'] - df['H1_EMA_50']) / df['close']
     df['Candle_Size'] = (df['high'] - df['low'])
     df['Rel_Volatility'] = df['Candle_Size'] / df['ATR']
+    
     df['RSI_Zone'] = 1
     df.loc[df['RSI'] > 70, 'RSI_Zone'] = 2
     df.loc[df['RSI'] < 30, 'RSI_Zone'] = 0

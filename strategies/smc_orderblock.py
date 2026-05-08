@@ -20,7 +20,7 @@ class SMCOrderBlockStrategy(BaseStrategy):
         self.active_break_dir = None
         self.last_traded_ob_time = None
 
-    def get_trend_ai_permission(self, df_m5):
+    def get_trend_ai_permission(self, df_m5, df_h1, df_h4):
         if not USE_AI_FILTER or self.trend_model is None:
             return 'SKIP_CHECK', 0.0
         try:
@@ -28,26 +28,36 @@ class SMCOrderBlockStrategy(BaseStrategy):
             if 'EMA_50' not in df.columns:
                 df['EMA_50'] = df.ta.ema(length=50)
                 df['EMA_200'] = df.ta.ema(length=200)
-                df['EMA_H1_Proxy'] = df.ta.ema(length=600)
                 df['RSI'] = df.ta.rsi(length=14)
                 df['ATR'] = df.ta.atr(length=14)
                 adx = df.ta.adx(length=14)
-                df['ADX'] = adx['ADX_14']
+                if adx is not None: df['ADX'] = adx['ADX_14']
+                else: df['ADX'] = 0
 
             latest = df.iloc[-2:].copy()
             latest['Dist_EMA_50'] = (latest['close'] - latest['EMA_50']) / latest['close']
             latest['Dist_EMA_200'] = (latest['close'] - latest['EMA_200']) / latest['close']
-            latest['Dist_H1'] = (latest['close'] - latest['EMA_H1_Proxy']) / latest['close']
             latest['Candle_Size'] = (latest['high'] - latest['low'])
             latest['Rel_Volatility'] = latest['Candle_Size'] / latest['ATR']
             latest['RSI_Zone'] = 1
             latest.loc[latest['RSI'] > 70, 'RSI_Zone'] = 2
             latest.loc[latest['RSI'] < 30, 'RSI_Zone'] = 0
+            
+            if df_h1 is not None and df_h4 is not None:
+                latest['H1_RSI'] = df_h1.ta.rsi(length=14).iloc[-1]
+                h1_ema_50 = df_h1.ta.ema(length=50).iloc[-1]
+                latest['Dist_H1'] = (latest['close'] - h1_ema_50) / latest['close']
+                adx_h4 = df_h4.ta.adx(length=14)
+                latest['H4_ADX'] = adx_h4['ADX_14'].iloc[-1] if adx_h4 is not None else 0
+            else:
+                latest['H1_RSI'] = 50
+                latest['Dist_H1'] = 0
+                latest['H4_ADX'] = 0
 
             latest.replace([np.inf, -np.inf], 0, inplace=True)
             latest.fillna(0, inplace=True)
 
-            feature_cols = ['Dist_EMA_50', 'Dist_EMA_200', 'Dist_H1', 'RSI', 'RSI_Zone', 'Rel_Volatility', 'ADX']
+            feature_cols = ['Dist_EMA_50', 'Dist_EMA_200', 'Dist_H1', 'RSI', 'RSI_Zone', 'Rel_Volatility', 'ADX', 'H1_RSI', 'H4_ADX']
             X_live = latest[feature_cols].iloc[[-1]]
 
             probs = self.trend_model.predict_proba(X_live)
@@ -181,7 +191,7 @@ class SMCOrderBlockStrategy(BaseStrategy):
                     
                     elif current_price <= ob['top'] and (time.time() - self.ai_throttle_timer > 3.0):
                         self.ai_throttle_timer = time.time()
-                        ai_verdict, ai_conf = self.get_trend_ai_permission(df_m5) 
+                        ai_verdict, ai_conf = self.get_trend_ai_permission(df_m5, df_h1, df_h4) 
                         
                         if ai_verdict == 'BUY':
                             structural_sl = ob['bottom'] - spread_padding
@@ -205,7 +215,7 @@ class SMCOrderBlockStrategy(BaseStrategy):
                         
                     elif current_price >= ob['bottom'] and (time.time() - self.ai_throttle_timer > 3.0):
                         self.ai_throttle_timer = time.time()
-                        ai_verdict, ai_conf = self.get_trend_ai_permission(df_m5) 
+                        ai_verdict, ai_conf = self.get_trend_ai_permission(df_m5, df_h1, df_h4) 
                         
                         if ai_verdict == 'SELL':
                             structural_sl = ob['top'] + spread_padding

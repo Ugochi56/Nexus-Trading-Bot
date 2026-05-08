@@ -12,7 +12,7 @@ class RSIReversionStrategy(BaseStrategy):
         self.ai_throttle_timer = 0
         self.dynamic_sl_padding = 0
 
-    def get_reversal_ai_permission(self, df_m5):
+    def get_reversal_ai_permission(self, df_m5, df_h1, df_h4):
         if not USE_AI_FILTER or self.reversal_model is None:
             return 'SKIP_CHECK', 0.0
         try:
@@ -20,6 +20,11 @@ class RSIReversionStrategy(BaseStrategy):
             df['ATR'] = ta.atr(df['high'], df['low'], df['close'], length=14)
             df['RSI'] = ta.rsi(df['close'], length=14)
             df['EMA_50'] = ta.ema(df['close'], length=50)
+            df['EMA_200'] = ta.ema(df['close'], length=200)
+            
+            adx = ta.adx(df['high'], df['low'], df['close'], length=14)
+            if adx is not None: df['ADX'] = adx['ADX_14']
+            else: df['ADX'] = 0
             
             bbands = ta.bbands(df['close'], length=20, std=2.0)
             bbu_col = [c for c in bbands.columns if c.startswith('BBU')][0]
@@ -42,8 +47,29 @@ class RSIReversionStrategy(BaseStrategy):
             df.dropna(inplace=True)
             if len(df) == 0: return 'SKIP_CHECK', 0.0
             
-            latest = df.iloc[[-1]]
-            features = ['RSI', 'Dist_BB_Upper', 'Dist_BB_Lower', 'Rel_Volume', 'Upper_Wick_Ratio', 'Lower_Wick_Ratio', 'Stretch_50']
+            latest = df.iloc[[-1]].copy()
+            
+            # Legacy features matching data collector
+            latest['Dist_EMA_50'] = (latest['close'] - latest['EMA_50']) / latest['close']
+            latest['Dist_EMA_200'] = (latest['close'] - latest['EMA_200']) / latest['close']
+            latest['Candle_Size'] = (latest['high'] - latest['low'])
+            latest['Rel_Volatility'] = latest['Candle_Size'] / latest['ATR']
+            
+            if df_h1 is not None and df_h4 is not None:
+                latest['H1_RSI'] = df_h1.ta.rsi(length=14).iloc[-1]
+                h1_ema_50 = df_h1.ta.ema(length=50).iloc[-1]
+                latest['Dist_H1'] = (latest['close'] - h1_ema_50) / latest['close']
+                adx_h4 = df_h4.ta.adx(length=14)
+                latest['H4_ADX'] = adx_h4['ADX_14'].iloc[-1] if adx_h4 is not None else 0
+            else:
+                latest['H1_RSI'] = 50
+                latest['Dist_H1'] = 0
+                latest['H4_ADX'] = 0
+
+            latest.replace([np.inf, -np.inf], 0, inplace=True)
+            latest.fillna(0, inplace=True)
+            
+            features = ['Dist_EMA_50', 'Dist_EMA_200', 'Dist_H1', 'RSI', 'Rel_Volatility', 'ADX', 'H1_RSI', 'H4_ADX']
             X_live = latest[features]
             
             probs = self.reversal_model.predict_proba(X_live)
@@ -73,7 +99,7 @@ class RSIReversionStrategy(BaseStrategy):
         if self.last_rsi_signal_time != last_candle_time and (time.time() - self.ai_throttle_timer > 3.0):
             if curr_rsi <= RSI_OVERSOLD or curr_rsi >= RSI_OVERBOUGHT:
                 self.ai_throttle_timer = time.time()
-                ai_verdict, ai_conf = self.get_reversal_ai_permission(df_m5)
+                ai_verdict, ai_conf = self.get_reversal_ai_permission(df_m5, df_h1, df_h4)
                 
                 if curr_rsi <= RSI_OVERSOLD and ai_verdict == 'BUY':
                     sl = current_price - self.dynamic_sl_padding
