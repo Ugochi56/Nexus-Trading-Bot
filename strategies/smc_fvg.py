@@ -126,7 +126,7 @@ class SMCStrategy(BaseStrategy):
             action_msg = f"[WATCH] {self.active_fvg['type']}"
             if self.active_fvg['type'] == 'BUY':
                 if current_price < self.active_fvg['bottom']: 
-                    print(f"[SMC] [ZONE BROKEN]: BUY {self.active_fvg['bottom']:.2f}-{self.active_fvg['top']:.2f}")
+                    print(f"\n[SMC] [ZONE BROKEN]: BUY {self.active_fvg['bottom']:.2f}-{self.active_fvg['top']:.2f}")
                     self.active_fvg = None
                 
                 elif current_price <= self.active_fvg['top'] and (time.time() - self.ai_throttle_timer > 3.0):
@@ -157,14 +157,14 @@ class SMCStrategy(BaseStrategy):
                             else: reason = f"Uncertain market (Score < {AI_CONFIDENCE_THRESHOLD})"
                             spam_key = f"BUY_{self.active_fvg['bottom']}_{reason}"
                             if getattr(self, 'last_spam', '') != spam_key:
-                                print(f"[SMC] [AI DENIED BUY] ({ai_conf:.2f}) -> Reason: {reason}")
+                                print(f"\n[SMC] [AI DENIED BUY] ({ai_conf:.2f}) -> Reason: {reason}")
                                 self.last_spam = spam_key
                             self.denied_fvg_times.add(self.active_fvg['time'])
                             self.active_fvg = None 
 
             elif self.active_fvg['type'] == 'SELL':
                 if current_price > self.active_fvg['top']: 
-                    print(f"[SMC] [ZONE BROKEN]: SELL {self.active_fvg['bottom']:.2f}-{self.active_fvg['top']:.2f}")
+                    print(f"\n[SMC] [ZONE BROKEN]: SELL {self.active_fvg['bottom']:.2f}-{self.active_fvg['top']:.2f}")
                     self.active_fvg = None
                     
                 elif current_price >= self.active_fvg['bottom'] and (time.time() - self.ai_throttle_timer > 3.0):
@@ -195,7 +195,7 @@ class SMCStrategy(BaseStrategy):
                             else: reason = f"Uncertain market (Score < {AI_CONFIDENCE_THRESHOLD})"
                             spam_key = f"SELL_{self.active_fvg['top']}_{reason}"
                             if getattr(self, 'last_spam', '') != spam_key:
-                                print(f"[SMC] [AI DENIED SELL] ({ai_conf:.2f}) -> Reason: {reason}")
+                                print(f"\n[SMC] [AI DENIED SELL] ({ai_conf:.2f}) -> Reason: {reason}")
                                 self.last_spam = spam_key
                             self.denied_fvg_times.add(self.active_fvg['time'])
                             self.active_fvg = None

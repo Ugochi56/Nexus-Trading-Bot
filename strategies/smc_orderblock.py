@@ -175,7 +175,7 @@ class SMCOrderBlockStrategy(BaseStrategy):
                 self.active_obs.append(new_ob)
                 if len(self.active_obs) > self.max_obs:
                     self.active_obs.pop(0)
-                print(f"[OB] [FRESH ORDER BLOCK]: {new_ob['type']} {new_ob['bottom']:.2f}-{new_ob['top']:.2f}")
+                print(f"\n[OB] [FRESH ORDER BLOCK]: {new_ob['type']} {new_ob['bottom']:.2f}-{new_ob['top']:.2f}")
 
         if self.active_obs:
             action_msg = f"[OB_WATCH] {len(self.active_obs)} Active Block(s)"
@@ -186,7 +186,7 @@ class SMCOrderBlockStrategy(BaseStrategy):
                 
                 if ob['type'] == 'BUY':
                     if current_price < ob['bottom']: 
-                        print(f"[OB] [BLOCK INVALIDATED]: BUY {ob['bottom']:.2f} Penetrated/Mitigated.")
+                        print(f"\n[OB] [BLOCK INVALIDATED]: BUY {ob['bottom']:.2f} Penetrated/Mitigated.")
                         is_valid = False
                     
                     elif current_price <= ob['top'] and (time.time() - self.ai_throttle_timer > 3.0):
@@ -211,12 +211,12 @@ class SMCOrderBlockStrategy(BaseStrategy):
                             else: reason = f"Uncertain market (Score < {AI_CONFIDENCE_THRESHOLD})"
                             spam_key = f"BUY_{ob['bottom']}_{reason}"
                             if getattr(self, 'last_spam', '') != spam_key:
-                                print(f"[OB] [AI DENIED OB BUY] ({ai_conf:.2f}) -> {reason}")
+                                print(f"\n[OB] [AI DENIED OB BUY] ({ai_conf:.2f}) -> {reason}")
                                 self.last_spam = spam_key
 
                 elif ob['type'] == 'SELL':
                     if current_price > ob['top']: 
-                        print(f"[OB] [BLOCK INVALIDATED]: SELL {ob['top']:.2f} Penetrated/Mitigated.")
+                        print(f"\n[OB] [BLOCK INVALIDATED]: SELL {ob['top']:.2f} Penetrated/Mitigated.")
                         is_valid = False
                         
                     elif current_price >= ob['bottom'] and (time.time() - self.ai_throttle_timer > 3.0):
@@ -240,7 +240,7 @@ class SMCOrderBlockStrategy(BaseStrategy):
                             else: reason = f"Uncertain market (Score < {AI_CONFIDENCE_THRESHOLD})"
                             spam_key = f"SELL_{ob['top']}_{reason}"
                             if getattr(self, 'last_spam', '') != spam_key:
-                                print(f"[OB] [AI DENIED OB SELL] ({ai_conf:.2f}) -> {reason}")
+                                print(f"\n[OB] [AI DENIED OB SELL] ({ai_conf:.2f}) -> {reason}")
                                 self.last_spam = spam_key
                 
                 if is_valid:
