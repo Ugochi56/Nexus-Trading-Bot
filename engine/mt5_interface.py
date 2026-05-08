@@ -13,6 +13,9 @@ virtual_ticket_counter = 1000
 daily_start_equity = 0.0
 last_day_checked = -1
 
+# TTL configuration for Limit Orders (1 hour at M5 = 12 bars)
+PENDING_ORDER_EXPIRY_BARS = 12
+
 def connect_mt5():
     if not mt5.initialize():
         print(f"\n[ERROR] MT5 Init Failed")
@@ -111,7 +114,7 @@ def calculate_position_size(entry_price, sl_price, risk_pct):
     lots = round(lots / step) * step
     return max(symbol_info.volume_min, min(lots, symbol_info.volume_max))
 
-def execute_trade(signal, sl_price, risk_pct, magic_num, comment_text, ai_conf=0.55):
+def execute_trade(signal, sl_price, risk_pct, magic_num, comment_text, ai_conf=0.55, limit_price=None):
     global virtual_ticket_counter
     
     if DYNAMIC_RISK:
@@ -121,44 +124,77 @@ def execute_trade(signal, sl_price, risk_pct, magic_num, comment_text, ai_conf=0
     if risk_pct <= 0: return False
     tick = mt5.symbol_info_tick(SYMBOL)
     price = tick.ask if signal == 'BUY' else tick.bid
-    lots = calculate_position_size(price, sl_price, risk_pct)
-    risk_dist = abs(price - sl_price)
-    tp = price + (risk_dist * RISK_REWARD_RATIO) if signal == 'BUY' else price - (risk_dist * RISK_REWARD_RATIO)
     
-    print(f"\n[EXEC] ({comment_text}) | Risk {risk_pct:.2f}%")
-    print(f"       Entry: {price:.2f} | SL: {sl_price:.2f} | TP: {tp:.2f} | Lots: {lots}")
+    # Hybrid Execution Logic: Use Limit Order if AI confidence is extremely high and limit price is valid
+    is_limit_order = False
+    execution_price = price
+    action_type = mt5.TRADE_ACTION_DEAL
+    order_type = mt5.ORDER_TYPE_BUY if signal == 'BUY' else mt5.ORDER_TYPE_SELL
+    
+    if limit_price and ai_conf >= getattr(sys.modules['core.config'], 'AI_LIMIT_ORDER_THRESHOLD', 0.75):
+        # We only use limit if it's better than current price
+        if (signal == 'BUY' and limit_price < price) or (signal == 'SELL' and limit_price > price):
+            is_limit_order = True
+            execution_price = limit_price
+            action_type = mt5.TRADE_ACTION_PENDING
+            order_type = mt5.ORDER_TYPE_BUY_LIMIT if signal == 'BUY' else mt5.ORDER_TYPE_SELL_LIMIT
+            comment_text += f" | LIMIT [{limit_price:.2f}]"
+    
+    lots = calculate_position_size(execution_price, sl_price, risk_pct)
+    risk_dist = abs(execution_price - sl_price)
+    tp = execution_price + (risk_dist * RISK_REWARD_RATIO) if signal == 'BUY' else execution_price - (risk_dist * RISK_REWARD_RATIO)
+    
+    exec_mode = "LIMIT" if is_limit_order else "MARKET"
+    print(f"\n[EXEC] {exec_mode} ({comment_text}) | Risk {risk_pct:.2f}%")
+    print(f"       Entry: {execution_price:.2f} | SL: {sl_price:.2f} | TP: {tp:.2f} | Lots: {lots}")
     
     if DRY_RUN:
         virtual_ticket_counter += 1
         virtual_positions[virtual_ticket_counter] = {
             'ticket': virtual_ticket_counter,
-            'type': mt5.ORDER_TYPE_BUY if signal == 'BUY' else mt5.ORDER_TYPE_SELL,
-            'price_open': price,
+            'type': order_type,
+            'price_open': execution_price,
             'sl': sl_price,
             'tp': tp,
             'lots': lots,
             'magic': magic_num,
             'comment': comment_text
         }
-        print(f"[VIRTUAL] ORDER PLACED! Ticket: {virtual_ticket_counter}")
+        print(f"[VIRTUAL] {exec_mode} ORDER PLACED! Ticket: {virtual_ticket_counter}")
         return True
     
     request = {
-        "action": mt5.TRADE_ACTION_DEAL, "symbol": SYMBOL, "volume": lots, 
-        "type": mt5.ORDER_TYPE_BUY if signal == 'BUY' else mt5.ORDER_TYPE_SELL,
-        "price": price, "sl": sl_price, "tp": tp, "deviation": DEVIATION, 
+        "action": action_type, "symbol": SYMBOL, "volume": lots, 
+        "type": order_type, "price": execution_price, "sl": sl_price, "tp": tp, "deviation": DEVIATION, 
         "magic": magic_num, "comment": comment_text,
-        "type_time": mt5.ORDER_TIME_GTC, "type_filling": mt5.ORDER_FILLING_IOC,
+        "type_time": mt5.ORDER_TIME_GTC, "type_filling": mt5.ORDER_FILLING_IOC if action_type == mt5.TRADE_ACTION_DEAL else mt5.ORDER_FILLING_RETURN,
     }
     result = mt5.order_send(request)
     if result is None:
         print("[ERROR] Order Failed: mt5.order_send returned None (Network Timeout)")
         return False
     if result.retcode != mt5.TRADE_RETCODE_DONE:
-        print(f"[ERROR] Order Failed: {result.comment}")
+        print(f"[ERROR] {exec_mode} Order Failed: {result.comment}")
         return False
-    print(f"[TRADE] ORDER PLACED! Ticket: {result.order}")
+    print(f"[TRADE] {exec_mode} ORDER PLACED! Ticket: {result.order}")
     return True
+    
+def manage_pending_orders():
+    """Cancels Pending Limit Orders that have expired."""
+    if DRY_RUN: return
+    orders = mt5.orders_get(symbol=SYMBOL)
+    if not orders: return
+    
+    now_ts = int(time.time())
+    for order in orders:
+        if order.magic != MAGIC_NUMBER: continue
+        # Calculate expiry time (PENDING_ORDER_EXPIRY_BARS * 5 minutes)
+        expiry_seconds = PENDING_ORDER_EXPIRY_BARS * 5 * 60
+        if (now_ts - order.time_setup) > expiry_seconds:
+            req = {"action": mt5.TRADE_ACTION_REMOVE, "order": order.ticket}
+            res = mt5.order_send(req)
+            if res and res.retcode == mt5.TRADE_RETCODE_DONE:
+                print(f"\n[TTL] Cancelled Expired Limit Order #{order.ticket}")
 
 def manage_open_positions():
     if DRY_RUN:

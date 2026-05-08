@@ -10,7 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.config import *
 from core.utils import is_us_dst, get_session_name
 from core.indicators import calculate_atr_simple, calculate_rsi_simple, calculate_adx_simple
-from engine.mt5_interface import connect_mt5, check_daily_drawdown, get_market_data, execute_trade, manage_open_positions, check_volatility_guard, close_all_positions, get_dynamic_kelly_risk
+from engine.mt5_interface import connect_mt5, check_daily_drawdown, get_market_data, execute_trade, manage_open_positions, manage_pending_orders, check_volatility_guard, close_all_positions, get_dynamic_kelly_risk
 from engine.news_filter import fetch_economic_news, is_news_blackout
 from strategies.smc_fvg import SMCStrategy
 from strategies.rsi_reversion import RSIReversionStrategy
@@ -81,6 +81,7 @@ def main():
                 last_equity_check_time = now_ts
             
             manage_open_positions()
+            manage_pending_orders()
 
             now_ts = time.time()
             if (now_ts - last_eval_time) > 3.0:
@@ -155,10 +156,17 @@ def main():
             # --- Strategy Routing ---
             regime_icon = "[NEUTRAL]"
             active_strats = ["SMC_FVG", "SMC_OB"]
-            if AUTO_SWITCH:
-                if curr_adx > ADX_TREND_START: active_strats = ["SMC_FVG", "SMC_OB", "BB_BREAKOUT"]; regime_icon = "[TREND]"
-                elif curr_adx < ADX_RANGE_START: active_strats = ["RSI_REVERSION", "VWAP_REVERSION"]; regime_icon = "[RANGE]"
-                else: active_strats = ["RSI_REVERSION", "VWAP_REVERSION", "BB_BREAKOUT"]; regime_icon = "[NEUTRAL]"
+            
+            # Phase 2: Time-Based Strategy Pruning
+            if current_session == "ASIAN":
+                if AUTO_SWITCH:
+                    active_strats = ["SMC_FVG", "SMC_OB", "RSI_REVERSION", "VWAP_REVERSION"]
+                    regime_icon = "[ASIAN-RANGE]"
+            else:
+                if AUTO_SWITCH:
+                    if curr_adx > ADX_TREND_START: active_strats = ["SMC_FVG", "SMC_OB", "BB_BREAKOUT"]; regime_icon = "[TREND]"
+                    elif curr_adx < ADX_RANGE_START: active_strats = ["RSI_REVERSION", "VWAP_REVERSION"]; regime_icon = "[RANGE]"
+                    else: active_strats = ["RSI_REVERSION", "VWAP_REVERSION", "BB_BREAKOUT"]; regime_icon = "[NEUTRAL]"
 
             if KILLZONE_EXEC_START <= server_hour < KILLZONE_EXEC_END:
                 active_strats.append("LONDON_BREAKOUT")
@@ -195,7 +203,8 @@ def main():
                                 risk_pct=r_pct, 
                                 magic_num=MAGIC_NUMBER, 
                                 comment_text=payload['comment'], 
-                                ai_conf=payload['confidence']
+                                ai_conf=payload['confidence'],
+                                limit_price=payload.get('limit_price')
                             )
 
             print(f"{status_base.ljust(90)}", end='')

@@ -2,6 +2,7 @@ from strategies.base import BaseStrategy
 from core.config import *
 import numpy as np
 import time
+from core.indicators import calculate_poc
 
 class SMCOrderBlockStrategy(BaseStrategy):
     def __init__(self, ai_model=None):
@@ -99,14 +100,20 @@ class SMCOrderBlockStrategy(BaseStrategy):
             # Find the last Bearish (Red) candle before this impulse
             for i in range(len(df)-2, len(df) - 15, -1):
                 if df.iloc[i]['close'] < df.iloc[i]['open']:
-                    # 2. Zone Expansion: Pad block structurally encompassing previous tick
+                    # Zone Expansion: Pad block structurally encompassing previous tick
                     zone_high = max(df.iloc[i]['high'], df.iloc[i-1]['high'])
                     zone_low = min(df.iloc[i]['low'], df.iloc[i-1]['low'])
+                    
+                    poc_price = calculate_poc(df)
+                    # Institutional Verification: POC must be near or inside the block
+                    if not (zone_low - avg_candle_size <= poc_price <= zone_high + avg_candle_size):
+                        return None
                     
                     ob = {
                         'type': 'BUY',
                         'top': zone_high,
                         'bottom': zone_low,
+                        'poc': poc_price,
                         'time': df.iloc[i]['time'],
                         'bos_time': current_candle['time']
                     }
@@ -125,10 +132,16 @@ class SMCOrderBlockStrategy(BaseStrategy):
                     zone_high = max(df.iloc[i]['high'], df.iloc[i-1]['high'])
                     zone_low = min(df.iloc[i]['low'], df.iloc[i-1]['low'])
                     
+                    poc_price = calculate_poc(df)
+                    # Institutional Verification: POC must be near or inside the block
+                    if not (zone_low - avg_candle_size <= poc_price <= zone_high + avg_candle_size):
+                        return None
+                    
                     ob = {
                         'type': 'SELL',
                         'top': zone_high,
                         'bottom': zone_low,
+                        'poc': poc_price,
                         'time': df.iloc[i]['time'],
                         'bos_time': current_candle['time']
                     }
@@ -172,7 +185,9 @@ class SMCOrderBlockStrategy(BaseStrategy):
                         
                         if ai_verdict == 'BUY':
                             structural_sl = ob['bottom'] - spread_padding
-                            signal_payload = {'signal': 'BUY', 'sl': structural_sl, 'confidence': ai_conf, 'comment': f"OB AI:{ai_conf:.2f}"}
+                            # Ensure limit price is not above current price to prevent immediate market execution of limits
+                            safe_limit_price = min(ob['poc'], current_price - spread_padding)
+                            signal_payload = {'signal': 'BUY', 'sl': structural_sl, 'limit_price': safe_limit_price, 'confidence': ai_conf, 'comment': f"OB AI:{ai_conf:.2f}"}
                             self.last_traded_ob_time = ob['time']
                             is_valid = False 
                         else:
@@ -194,7 +209,8 @@ class SMCOrderBlockStrategy(BaseStrategy):
                         
                         if ai_verdict == 'SELL':
                             structural_sl = ob['top'] + spread_padding
-                            signal_payload = {'signal': 'SELL', 'sl': structural_sl, 'confidence': ai_conf, 'comment': f"OB AI:{ai_conf:.2f}"}
+                            safe_limit_price = max(ob['poc'], current_price + spread_padding)
+                            signal_payload = {'signal': 'SELL', 'sl': structural_sl, 'limit_price': safe_limit_price, 'confidence': ai_conf, 'comment': f"OB AI:{ai_conf:.2f}"}
                             self.last_traded_ob_time = ob['time']
                             is_valid = False
                         else:
