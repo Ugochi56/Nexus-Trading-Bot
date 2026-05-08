@@ -159,7 +159,7 @@ class SMCOrderBlockStrategy(BaseStrategy):
                     
         return None
 
-    def evaluate(self, df_m5, df_h1, df_h4, df_adx, current_price, current_risk, atr, **kwargs):
+    def evaluate(self, df_m5, df_h1, df_h4, df_adx, current_price, current_risk, atr, ai_mode="DEFENSIVE", **kwargs):
         trend = self.get_trend_direction(df_h1, df_h4)
         signal_payload = None
         action_msg = f"[OB_SCAN] {trend}"
@@ -200,6 +200,12 @@ class SMCOrderBlockStrategy(BaseStrategy):
                             signal_payload = {'signal': 'BUY', 'sl': structural_sl, 'limit_price': safe_limit_price, 'confidence': ai_conf, 'comment': f"OB AI:{ai_conf:.2f}"}
                             self.last_traded_ob_time = ob['time']
                             is_valid = False 
+                        elif ai_verdict == 'SELL' and ai_mode == 'OFFENSIVE':
+                            print(f"\n[OB] [AI TRAP INVERSION]: Front-running M5 BUY Trap into Macro SELL")
+                            structural_sl = ob['top'] + spread_padding
+                            signal_payload = {'signal': 'SELL', 'sl': structural_sl, 'confidence': ai_conf, 'comment': "TRAP SELL OB"}
+                            self.last_traded_ob_time = ob['time']
+                            is_valid = False
                         else:
                             if ai_verdict == 'SELL': reason = "Predicts trend reversal (DOWN)"
                             else: reason = f"Uncertain market (Score < {AI_CONFIDENCE_THRESHOLD})"
@@ -221,6 +227,12 @@ class SMCOrderBlockStrategy(BaseStrategy):
                             structural_sl = ob['top'] + spread_padding
                             safe_limit_price = max(ob['poc'], current_price + spread_padding)
                             signal_payload = {'signal': 'SELL', 'sl': structural_sl, 'limit_price': safe_limit_price, 'confidence': ai_conf, 'comment': f"OB AI:{ai_conf:.2f}"}
+                            self.last_traded_ob_time = ob['time']
+                            is_valid = False
+                        elif ai_verdict == 'BUY' and ai_mode == 'OFFENSIVE':
+                            print(f"\n[OB] [AI TRAP INVERSION]: Front-running M5 SELL Trap into Macro BUY")
+                            structural_sl = ob['bottom'] - spread_padding
+                            signal_payload = {'signal': 'BUY', 'sl': structural_sl, 'confidence': ai_conf, 'comment': "TRAP BUY OB"}
                             self.last_traded_ob_time = ob['time']
                             is_valid = False
                         else:

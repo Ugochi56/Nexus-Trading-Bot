@@ -109,7 +109,7 @@ class SMCStrategy(BaseStrategy):
         except Exception as e:
             return 'SKIP_CHECK', 0.0
 
-    def evaluate(self, df_m5, df_h1, df_h4, df_adx, current_price, current_risk, atr, **kwargs):
+    def evaluate(self, df_m5, df_h1, df_h4, df_adx, current_price, current_risk, atr, ai_mode="DEFENSIVE", **kwargs):
         self.dynamic_sl_padding = atr * SL_ATR_MULTIPLIER
         trend = self.get_trend_direction(df_h1)
         new_fvg = self.find_fresh_fvg(df_m5, trend, lookback=30)
@@ -146,6 +146,12 @@ class SMCStrategy(BaseStrategy):
                             signal_payload = {'signal': 'BUY', 'sl': sl, 'confidence': ai_conf, 'comment': f"SMC AI:{ai_conf:.2f}"}
                             self.last_traded_fvg_id = self.active_fvg['time']
                             self.active_fvg = None
+                        elif ai_verdict == 'SELL' and ai_mode == 'OFFENSIVE':
+                            print(f"\n[SMC] [AI TRAP INVERSION]: Front-running M5 BUY Trap into Macro SELL")
+                            sl = self.active_fvg['top'] + self.dynamic_sl_padding
+                            signal_payload = {'signal': 'SELL', 'sl': sl, 'confidence': ai_conf, 'comment': "TRAP SELL FVG"}
+                            self.last_traded_fvg_id = self.active_fvg['time']
+                            self.active_fvg = None
                         else:
                             if ai_verdict == 'SELL': reason = "Predicts trend reversal (DOWN)"
                             else: reason = f"Uncertain market (Score < {AI_CONFIDENCE_THRESHOLD})"
@@ -176,6 +182,12 @@ class SMCStrategy(BaseStrategy):
                         if ai_verdict == 'SELL':
                             sl = self.active_fvg['top'] + self.dynamic_sl_padding
                             signal_payload = {'signal': 'SELL', 'sl': sl, 'confidence': ai_conf, 'comment': f"SMC AI:{ai_conf:.2f}"}
+                            self.last_traded_fvg_id = self.active_fvg['time']
+                            self.active_fvg = None
+                        elif ai_verdict == 'BUY' and ai_mode == 'OFFENSIVE':
+                            print(f"\n[SMC] [AI TRAP INVERSION]: Front-running M5 SELL Trap into Macro BUY")
+                            sl = self.active_fvg['bottom'] - self.dynamic_sl_padding
+                            signal_payload = {'signal': 'BUY', 'sl': sl, 'confidence': ai_conf, 'comment': "TRAP BUY FVG"}
                             self.last_traded_fvg_id = self.active_fvg['time']
                             self.active_fvg = None
                         else:

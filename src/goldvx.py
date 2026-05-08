@@ -170,6 +170,8 @@ def main():
 
             if KILLZONE_EXEC_START <= server_hour < KILLZONE_EXEC_END:
                 active_strats.append("LONDON_BREAKOUT")
+                
+            ai_mode = "OFFENSIVE" if regime_icon == "[TREND]" else "DEFENSIVE"
 
             curr_strats_str = ",".join(active_strats)
             if curr_strats_str != prev_strats_str:
@@ -191,7 +193,8 @@ def main():
                     if strategy:
                         res = strategy.evaluate(
                             df_m5=df_m5, df_h1=df_h1, df_h4=df_h4, df_adx=df_adx, 
-                            current_price=curr_price, current_risk=current_risk, atr=current_atr
+                            current_price=curr_price, current_risk=current_risk, atr=current_atr,
+                            ai_mode=ai_mode
                         )
                         payload = res.get('payload')
                         
