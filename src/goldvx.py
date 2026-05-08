@@ -188,6 +188,7 @@ def main():
             
             if "FLAT" not in active_strats:
                 # ORCHESTRATOR: MAXIMUM CONFLUENCE EVALUATOR
+                ui_messages = []
                 for strat_key in active_strats:
                     strategy = strategies.get(strat_key)
                     if strategy:
@@ -196,6 +197,10 @@ def main():
                             current_price=curr_price, current_risk=current_risk, atr=current_atr,
                             ai_mode=ai_mode
                         )
+                        ui_msg = res.get('ui')
+                        if ui_msg and not ui_msg.startswith("[SCAN]") and not ui_msg.startswith("[OB_SCAN]"):
+                            ui_messages.append(ui_msg)
+                            
                         payload = res.get('payload')
                         
                         if payload:
@@ -209,8 +214,11 @@ def main():
                                 ai_conf=payload['confidence'],
                                 limit_price=payload.get('limit_price')
                             )
+                            
+                if ui_messages:
+                    status_base += " || " + " ".join(ui_messages)
 
-            print(f"{status_base.ljust(90)}", end='')
+            print(f"{status_base.ljust(120)}", end='')
                 
             time.sleep(0.5)
 

@@ -85,7 +85,6 @@ class RSIReversionStrategy(BaseStrategy):
     def evaluate(self, df_m5, df_h1, df_h4, df_adx, current_price, current_risk, atr, **kwargs):
         self.dynamic_sl_padding = atr * SL_ATR_MULTIPLIER
         signal_payload = None
-        action_msg = "[SCALP] Dual AI"
 
         last_candle_time = df_m5.iloc[-1]['time']
         curr_rsi = df_m5.iloc[-1].get('rsi', 50) 
@@ -93,6 +92,8 @@ class RSIReversionStrategy(BaseStrategy):
         if 'rsi' not in df_m5.columns:
             df_m5['rsi'] = ta.rsi(df_m5['close'], length=14)
             curr_rsi = df_m5.iloc[-1]['rsi']
+
+        action_msg = f"[RSI: {curr_rsi:.1f}]"
 
         scalp_risk = min(current_risk, 0.5) 
 
