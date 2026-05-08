@@ -9,7 +9,7 @@ class SMCStrategy(BaseStrategy):
         self.trend_model = ai_model
         self.active_fvg = None
         self.last_traded_fvg_id = None
-        self.last_denied_fvg_time = None
+        self.denied_fvg_times = set()
         self.ai_throttle_timer = 0
         self.dynamic_sl_padding = 0
 
@@ -117,7 +117,7 @@ class SMCStrategy(BaseStrategy):
         signal_payload = None
         action_msg = f"[SCAN] {trend}"
 
-        if new_fvg and new_fvg['time'] not in [self.last_traded_fvg_id, self.last_denied_fvg_time]:
+        if new_fvg and new_fvg['time'] != self.last_traded_fvg_id and new_fvg['time'] not in self.denied_fvg_times:
             if self.active_fvg is None or new_fvg['time'] != self.active_fvg['time']:
                 self.active_fvg = new_fvg
                 print(f"\n[SMC] [NEW ZONE]: {self.active_fvg['type']} {self.active_fvg['bottom']:.2f}-{self.active_fvg['top']:.2f}")
@@ -159,7 +159,7 @@ class SMCStrategy(BaseStrategy):
                             if getattr(self, 'last_spam', '') != spam_key:
                                 print(f"[SMC] [AI DENIED BUY] ({ai_conf:.2f}) -> Reason: {reason}")
                                 self.last_spam = spam_key
-                            self.last_denied_fvg_time = self.active_fvg['time']
+                            self.denied_fvg_times.add(self.active_fvg['time'])
                             self.active_fvg = None 
 
             elif self.active_fvg['type'] == 'SELL':
@@ -197,7 +197,7 @@ class SMCStrategy(BaseStrategy):
                             if getattr(self, 'last_spam', '') != spam_key:
                                 print(f"[SMC] [AI DENIED SELL] ({ai_conf:.2f}) -> Reason: {reason}")
                                 self.last_spam = spam_key
-                            self.last_denied_fvg_time = self.active_fvg['time']
+                            self.denied_fvg_times.add(self.active_fvg['time'])
                             self.active_fvg = None
 
         return {'payload': signal_payload, 'ui': action_msg}
