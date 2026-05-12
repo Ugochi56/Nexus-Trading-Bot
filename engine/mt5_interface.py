@@ -138,7 +138,7 @@ def execute_trade(signal, sl_price, risk_pct, magic_num, comment_text, ai_conf=0
             execution_price = limit_price
             action_type = mt5.TRADE_ACTION_PENDING
             order_type = mt5.ORDER_TYPE_BUY_LIMIT if signal == 'BUY' else mt5.ORDER_TYPE_SELL_LIMIT
-            comment_text += f" | LIMIT [{limit_price:.2f}]"
+            comment_text += f" LMT {limit_price:.1f}"
     
     lots = calculate_position_size(execution_price, sl_price, risk_pct)
     risk_dist = abs(execution_price - sl_price)
@@ -163,12 +163,19 @@ def execute_trade(signal, sl_price, risk_pct, magic_num, comment_text, ai_conf=0
         print(f"[VIRTUAL] {exec_mode} ORDER PLACED! Ticket: {virtual_ticket_counter}")
         return True
     
+    # MT5 strictly enforces a 27-31 character limit on the comment field
+    # and will crash if brackets are unbalanced or parsed incorrectly.
+    final_comment = str(comment_text)[:27]
+    
     request = {
-        "action": action_type, "symbol": SYMBOL, "volume": lots, 
-        "type": order_type, "price": execution_price, "sl": sl_price, "tp": tp, "deviation": DEVIATION, 
-        "magic": magic_num, "comment": comment_text,
+        "action": action_type, "symbol": SYMBOL, "volume": float(lots), 
+        "type": order_type, "price": float(execution_price), "sl": float(sl_price), "tp": float(tp), "deviation": int(DEVIATION), 
+        "magic": int(magic_num), "comment": final_comment,
         "type_time": mt5.ORDER_TIME_GTC, "type_filling": mt5.ORDER_FILLING_IOC if action_type == mt5.TRADE_ACTION_DEAL else mt5.ORDER_FILLING_RETURN,
     }
+    check = mt5.order_check(request)
+    if check is None:
+        print(f"CHECK FAILED: {mt5.last_error()}")
     result = mt5.order_send(request)
     if result is None:
         print("[ERROR] Order Failed: mt5.order_send returned None (Network Timeout)")
