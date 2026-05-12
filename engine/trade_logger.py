@@ -1,7 +1,7 @@
 import MetaTrader5 as mt5
 import pandas as pd
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -47,7 +47,7 @@ def export_trade_ledger():
 
     # Get history from Jan 1st 2020 to now
     time_from = datetime(2020, 1, 1)
-    time_to = datetime.now().astimezone()
+    time_to = datetime.now() + timedelta(days=1)
     deals = mt5.history_deals_get(time_from, time_to)
     
     if deals is None or len(deals) == 0:

@@ -2,7 +2,7 @@ import time
 import sys
 import os
 import joblib
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Add the project root to sys.path so 'core', 'engine' and 'strategies' can be found
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -64,7 +64,7 @@ def main():
     last_equity_check_time = 0
     last_ledger_update_time = 0
     cached_equity = 0.0
-    last_deal_count = mt5.history_deals_total(datetime(2020, 1, 1), datetime.now().astimezone())
+    last_deal_count = mt5.history_deals_total(datetime(2020, 1, 1), datetime.now() + timedelta(days=1))
     market_closed_for_weekend = False
     
     prev_strats_str = ""
@@ -89,7 +89,7 @@ def main():
                 last_equity_check_time = now_ts
                 
             # Auto-Log: Trigger CSV ledger update instantly if total historical deals increase (trade open/close)
-            current_deals = mt5.history_deals_total(datetime(2020, 1, 1), datetime.now().astimezone())
+            current_deals = mt5.history_deals_total(datetime(2020, 1, 1), datetime.now() + timedelta(days=1))
             if current_deals is not None and current_deals > last_deal_count:
                 export_trade_ledger()
                 last_deal_count = current_deals
