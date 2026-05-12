@@ -2,6 +2,7 @@ import MetaTrader5 as mt5
 import pandas as pd
 import pandas_ta as ta
 import sys
+import time
 from datetime import datetime
 from core.config import *
 from core.indicators import *
