@@ -7,6 +7,9 @@ from datetime import datetime
 # Add the project root to sys.path so 'core', 'engine' and 'strategies' can be found
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Enable Windows 10/11 ANSI terminal colors/cursor-movement support natively
+os.system("")
+
 from core.config import *
 from core.utils import is_us_dst, get_session_name
 from core.indicators import calculate_atr_simple, calculate_rsi_simple, calculate_adx_simple
@@ -192,7 +195,7 @@ def main():
                 close_h1 = df_h1.iloc[-1]['close']
                 curr_trend = "UP" if close_h1 > ema_50 else "DOWN"
 
-            status_base = f"\r[{short_session}{dst_tag}] {regime_icon} T:{curr_trend} | ADX:{curr_adx:.1f} | Bal: ${cached_equity:,.2f} | Prc: ${curr_price:.2f}"
+            line1 = f"[{short_session}{dst_tag}] {regime_icon} T:{curr_trend} | ADX:{curr_adx:.1f} | Bal: ${cached_equity:,.2f} | Prc: ${curr_price:.2f}"
             
             if "FLAT" not in active_strats:
                 # ORCHESTRATOR: MAXIMUM CONFLUENCE EVALUATOR
@@ -223,12 +226,13 @@ def main():
                                 limit_price=payload.get('limit_price')
                             )
                             
-                if ui_messages:
-                    status_base += " || " + " ".join(ui_messages)
-
-            # Truncate to strictly 119 chars to prevent CMD wrap-around breaking \r
-            final_out = status_base[:119].ljust(119)
-            print(f"{final_out}", end='', flush=True)
+            # 2-Line ANSI HUD (Guarantees no word chopping and infinite space)
+            line2 = " ".join(ui_messages) if ui_messages else "Scanning..."
+            
+            # \033[K clears the line to prevent trailing artifact characters
+            # \033[F moves the cursor UP one line so the next tick overwrites cleanly
+            sys.stdout.write(f"\r\033[K{line1}\n\033[K>> {line2[:115]}\033[F")
+            sys.stdout.flush()
                 
             time.sleep(0.5)
 
