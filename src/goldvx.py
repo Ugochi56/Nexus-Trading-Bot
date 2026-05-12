@@ -12,6 +12,7 @@ from core.utils import is_us_dst, get_session_name
 from core.indicators import calculate_atr_simple, calculate_rsi_simple, calculate_adx_simple
 from engine.mt5_interface import connect_mt5, check_daily_drawdown, get_market_data, execute_trade, manage_open_positions, manage_pending_orders, check_volatility_guard, close_all_positions, get_dynamic_kelly_risk
 from engine.news_filter import fetch_economic_news, is_news_blackout
+from engine.trade_logger import export_trade_ledger
 from strategies.smc_fvg import SMCStrategy
 from strategies.rsi_reversion import RSIReversionStrategy
 from strategies.smc_orderblock import SMCOrderBlockStrategy
@@ -56,6 +57,7 @@ def main():
     is_safe = True
     last_heartbeat_min = -1
     last_equity_check_time = 0
+    last_ledger_update_time = 0
     cached_equity = 0.0
     market_closed_for_weekend = False
     
@@ -79,6 +81,10 @@ def main():
                 acc_info = mt5.account_info()
                 if acc_info: cached_equity = acc_info.equity
                 last_equity_check_time = now_ts
+                
+            if now_ts - last_ledger_update_time > 900:  # Every 15 minutes
+                export_trade_ledger()
+                last_ledger_update_time = now_ts
             
             manage_open_positions()
             manage_pending_orders()

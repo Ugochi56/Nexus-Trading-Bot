@@ -34,3 +34,5 @@ logs/
 Thumbs.db
 data/nexus_state.json
 src/backtester.py
+data/nexus_analytics_Apr_2026.txt
+data/nexus_analytics_May_2026.txt
