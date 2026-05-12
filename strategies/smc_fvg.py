@@ -123,7 +123,7 @@ class SMCStrategy(BaseStrategy):
                 print(f"\n[SMC] [NEW ZONE]: {self.active_fvg['type']} {self.active_fvg['bottom']:.2f}-{self.active_fvg['top']:.2f}")
 
         if self.active_fvg:
-            action_msg = f"[WATCH] {self.active_fvg['type']}"
+            action_msg = f"[W: {self.active_fvg['type']}]"
             if self.active_fvg['type'] == 'BUY':
                 if current_price < self.active_fvg['bottom']: 
                     print(f"\n[SMC] [ZONE BROKEN]: BUY {self.active_fvg['bottom']:.2f}-{self.active_fvg['top']:.2f}")

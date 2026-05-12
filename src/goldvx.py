@@ -192,7 +192,7 @@ def main():
                 close_h1 = df_h1.iloc[-1]['close']
                 curr_trend = "UP" if close_h1 > ema_50 else "DOWN"
 
-            status_base = f"\r[{short_session}{dst_tag}] {regime_icon} Trend:{curr_trend} | ADX:{curr_adx:.1f} | Bal: ${cached_equity:,.2f} | Prc: ${curr_price:.2f}"
+            status_base = f"\r[{short_session}{dst_tag}] {regime_icon} T:{curr_trend} | ADX:{curr_adx:.1f} | Bal: ${cached_equity:,.2f} | Prc: ${curr_price:.2f}"
             
             if "FLAT" not in active_strats:
                 # ORCHESTRATOR: MAXIMUM CONFLUENCE EVALUATOR
@@ -226,8 +226,9 @@ def main():
                 if ui_messages:
                     status_base += " || " + " ".join(ui_messages)
 
-            # Print the UI with flush=True so it doesn't overlap/buffer on Windows CMD
-            print(f"{status_base.ljust(150)}", end='', flush=True)
+            # Truncate to strictly 119 chars to prevent CMD wrap-around breaking \r
+            final_out = status_base[:119].ljust(119)
+            print(f"{final_out}", end='', flush=True)
                 
             time.sleep(0.5)
 

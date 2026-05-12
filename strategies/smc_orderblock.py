@@ -178,7 +178,7 @@ class SMCOrderBlockStrategy(BaseStrategy):
                 print(f"\n[OB] [FRESH ORDER BLOCK]: {new_ob['type']} {new_ob['bottom']:.2f}-{new_ob['top']:.2f}")
 
         if self.active_obs:
-            action_msg = f"[OB_WATCH] {len(self.active_obs)} Active Block(s)"
+            action_msg = f"[OB:{len(self.active_obs)}]"
             
             valid_obs = []
             for ob in self.active_obs:
