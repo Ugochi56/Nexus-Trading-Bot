@@ -66,7 +66,8 @@ def export_trade_ledger():
                 'commission': 0.0, 
                 'swap': 0.0, 
                 'fee': 0.0,
-                'volume': 0.0
+                'volume': 0.0,
+                'reason': ''
             }
             
         positions[pid]['profit'] += d.profit
@@ -81,6 +82,7 @@ def export_trade_ledger():
             positions[pid]['volume'] = d.volume
             # IN deal holds the magic number natively
             positions[pid]['magic'] = d.magic 
+            positions[pid]['reason'] = d.comment if d.comment else "Unknown"
             
         elif d.entry == mt5.DEAL_ENTRY_OUT:
             positions[pid]['close_time'] = datetime.fromtimestamp(d.time)
@@ -110,7 +112,8 @@ def export_trade_ledger():
             'Gross Profit': round(p['profit'], 2),
             'Fees': round(p['commission'] + p['swap'] + p['fee'], 2),
             'Net Profit': round(net_profit, 2),
-            'Outcome': outcome
+            'Outcome': outcome,
+            'Reason': p.get('reason', 'Unknown')
         })
 
     if not records:
