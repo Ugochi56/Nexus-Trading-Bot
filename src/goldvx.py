@@ -225,6 +225,8 @@ def main():
                                 ai_conf=payload['confidence'],
                                 limit_price=payload.get('limit_price')
                             )
+                            # Instantly force a ledger update to log the new execution
+                            export_trade_ledger()
                             
             # 2-Line ANSI HUD (Guarantees no word chopping and infinite space)
             line2 = " ".join(ui_messages) if ui_messages else "Scanning..."

@@ -127,6 +127,7 @@ class SMCStrategy(BaseStrategy):
             if self.active_fvg['type'] == 'BUY':
                 if current_price < self.active_fvg['bottom']: 
                     print(f"\n[SMC] [ZONE BROKEN]: BUY {self.active_fvg['bottom']:.2f}-{self.active_fvg['top']:.2f}")
+                    self.denied_fvg_times.add(self.active_fvg['time'])
                     self.active_fvg = None
                 
                 elif current_price <= self.active_fvg['top'] and (time.time() - self.ai_throttle_timer > 3.0):
@@ -165,6 +166,7 @@ class SMCStrategy(BaseStrategy):
             elif self.active_fvg['type'] == 'SELL':
                 if current_price > self.active_fvg['top']: 
                     print(f"\n[SMC] [ZONE BROKEN]: SELL {self.active_fvg['bottom']:.2f}-{self.active_fvg['top']:.2f}")
+                    self.denied_fvg_times.add(self.active_fvg['time'])
                     self.active_fvg = None
                     
                 elif current_price >= self.active_fvg['bottom'] and (time.time() - self.ai_throttle_timer > 3.0):
