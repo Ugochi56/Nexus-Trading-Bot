@@ -19,6 +19,7 @@ from strategies.smc_orderblock import SMCOrderBlockStrategy
 from strategies.vwap_reversion import VWAPReversionStrategy
 from strategies.bb_breakout import BBBreakoutStrategy
 from strategies.london_breakout import LondonBreakoutStrategy
+from strategies.liquidity_sweep import LiquiditySweepStrategy
 import MetaTrader5 as mt5
 
 def load_ai_models():
@@ -43,6 +44,7 @@ def main():
     strategies = {
         "SMC_FVG": SMCStrategy(trend_model),
         "SMC_OB": SMCOrderBlockStrategy(trend_model),
+        "LIQUIDITY_SWEEP": LiquiditySweepStrategy(trend_model),
         "RSI_REVERSION": RSIReversionStrategy(reversal_model),
         "VWAP_REVERSION": VWAPReversionStrategy(),
         "BB_BREAKOUT": BBBreakoutStrategy(),
@@ -65,7 +67,7 @@ def main():
     
     print("\n" + "="*55)
     print("[NEXUS ONLINE]")
-    print("[ENGINES: SMC_FVG, SMC_OB, RSI, VWAP, BB_BREAKOUT]")
+    print("[ENGINES: SMC_FVG, SMC_OB, RSI, VWAP, BB_BREAKOUT, LIQUIDITY_SWEEP]")
     print("="*55 + "\n")
 
     while True:
@@ -166,11 +168,11 @@ def main():
             # Phase 2: Time-Based Strategy Pruning
             if current_session == "ASIAN":
                 if AUTO_SWITCH:
-                    active_strats = ["SMC_FVG", "SMC_OB", "RSI_REVERSION", "VWAP_REVERSION"]
+                    active_strats = ["SMC_FVG", "SMC_OB", "RSI_REVERSION", "VWAP_REVERSION", "LIQUIDITY_SWEEP"]
                     regime_icon = "[ASIAN-RANGE]"
             else:
                 if AUTO_SWITCH:
-                    if curr_adx > ADX_TREND_START: active_strats = ["SMC_FVG", "SMC_OB", "BB_BREAKOUT"]; regime_icon = "[TREND]"
+                    if curr_adx > ADX_TREND_START: active_strats = ["SMC_FVG", "SMC_OB", "BB_BREAKOUT", "LIQUIDITY_SWEEP"]; regime_icon = "[TREND]"
                     elif curr_adx < ADX_RANGE_START: active_strats = ["RSI_REVERSION", "VWAP_REVERSION"]; regime_icon = "[RANGE]"
                     else: active_strats = ["RSI_REVERSION", "VWAP_REVERSION", "BB_BREAKOUT"]; regime_icon = "[NEUTRAL]"
 
@@ -224,7 +226,8 @@ def main():
                 if ui_messages:
                     status_base += " || " + " ".join(ui_messages)
 
-            print(f"{status_base.ljust(120)}", end='')
+            # Print the UI with flush=True so it doesn't overlap/buffer on Windows CMD
+            print(f"{status_base.ljust(150)}", end='', flush=True)
                 
             time.sleep(0.5)
 
