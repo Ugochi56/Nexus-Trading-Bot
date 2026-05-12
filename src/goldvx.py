@@ -64,6 +64,7 @@ def main():
     last_equity_check_time = 0
     last_ledger_update_time = 0
     cached_equity = 0.0
+    last_deal_count = mt5.history_deals_total(datetime(2020, 1, 1), datetime.now().astimezone())
     market_closed_for_weekend = False
     
     prev_strats_str = ""
@@ -87,7 +88,12 @@ def main():
                 if acc_info: cached_equity = acc_info.equity
                 last_equity_check_time = now_ts
                 
-            if now_ts - last_ledger_update_time > 900:  # Every 15 minutes
+            # Auto-Log: Trigger CSV ledger update instantly if total historical deals increase (trade open/close)
+            current_deals = mt5.history_deals_total(datetime(2020, 1, 1), datetime.now().astimezone())
+            if current_deals is not None and current_deals > last_deal_count:
+                export_trade_ledger()
+                last_deal_count = current_deals
+            elif now_ts - last_ledger_update_time > 900:  # Fallback: Every 15 minutes
                 export_trade_ledger()
                 last_ledger_update_time = now_ts
             
@@ -225,8 +231,7 @@ def main():
                                 ai_conf=payload['confidence'],
                                 limit_price=payload.get('limit_price')
                             )
-                            # Instantly force a ledger update to log the new execution
-                            export_trade_ledger()
+                            # Remove manual instant call here since the global history loop handles it now
                             
             # 2-Line ANSI HUD (Guarantees no word chopping and infinite space)
             line2 = " ".join(ui_messages) if ui_messages else "Scanning..."
