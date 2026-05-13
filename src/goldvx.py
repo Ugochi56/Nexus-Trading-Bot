@@ -2,6 +2,7 @@ import time
 import sys
 import os
 import joblib
+import shutil
 from datetime import datetime, timedelta
 
 # Add the project root to sys.path so 'core', 'engine' and 'strategies' can be found
@@ -236,11 +237,14 @@ def main():
                             
             line2 = " ".join(ui_messages) if ui_messages else ""
             
-            # Combine into an ultra-compact single line and truncate to exactly 119 chars to prevent \r breakage
+            # Combine into an ultra-compact single line
             full_hud = f"\r{line1} || {line2}" if line2 else f"\r{line1}"
             
+            # Dynamically fetch the actual width of the user's terminal to prevent wrapping glitches
+            term_width = shutil.get_terminal_size((120, 20)).columns
+            
             # \033[K clears the entire line so remnants of previous longer strings vanish
-            sys.stdout.write(f"\033[K{full_hud[:119]}")
+            sys.stdout.write(f"\033[K{full_hud[:term_width-1]}")
             sys.stdout.flush()
                 
             time.sleep(0.5)
