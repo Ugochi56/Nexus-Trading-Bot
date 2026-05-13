@@ -178,6 +178,6 @@ class LiquiditySweepStrategy(BaseStrategy):
         if not sweep_found and eqh_zones and eql_zones:
             closest_eqh = min(eqh_zones, key=lambda x: abs(x - current_price))
             closest_eql = min(eql_zones, key=lambda x: abs(x - current_price))
-            ui_msg = f"[LIQ BSL:{closest_eqh:.2f} SSL:{closest_eql:.2f}]"
+            ui_msg = f"[LIQ B:{closest_eqh:.1f} S:{closest_eql:.1f}]"
                 
         return {'ui': ui_msg, 'payload': payload}

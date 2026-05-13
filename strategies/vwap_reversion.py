@@ -61,7 +61,7 @@ class VWAPReversionStrategy(BaseStrategy):
             
         # UI Action Feedback string
         dist_pct = abs((current_price - vwap_val) / vwap_val) * 100
-        action_msg = f"[vDiv]: {dist_pct:.2f}%"
+        action_msg = f"[vDiv:{dist_pct:.1f}%]"
 
         # Dynamic Normalization Reset
         if current_price >= vwap_val and self.anomaly_buy_locked:

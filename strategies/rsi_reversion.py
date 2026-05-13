@@ -93,7 +93,7 @@ class RSIReversionStrategy(BaseStrategy):
             df_m5['rsi'] = ta.rsi(df_m5['close'], length=14)
             curr_rsi = df_m5.iloc[-1]['rsi']
 
-        action_msg = f"[RSI: {curr_rsi:.1f}]"
+        action_msg = f"[RSI: {curr_rsi:.0f}]"
 
         scalp_risk = min(current_risk, 0.5) 
 

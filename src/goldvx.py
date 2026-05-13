@@ -201,7 +201,7 @@ def main():
                 close_h1 = df_h1.iloc[-1]['close']
                 curr_trend = "UP" if close_h1 > ema_50 else "DOWN"
 
-            line1 = f"[{short_session}{dst_tag}] {regime_icon} T:{curr_trend} | ADX:{curr_adx:.1f} | Bal: ${cached_equity:,.2f} | Prc: ${curr_price:.2f}"
+            line1 = f"[{short_session}{dst_tag}] {regime_icon} T:{curr_trend} | ADX:{curr_adx:.1f} | ${cached_equity:,.2f} | {curr_price:.2f}"
             
             if "FLAT" not in active_strats:
                 # ORCHESTRATOR: MAXIMUM CONFLUENCE EVALUATOR
@@ -233,12 +233,13 @@ def main():
                             )
                             # Remove manual instant call here since the global history loop handles it now
                             
-            # 2-Line ANSI HUD (Guarantees no word chopping and infinite space)
-            line2 = " ".join(ui_messages) if ui_messages else "Scanning..."
+            line2 = " ".join(ui_messages) if ui_messages else ""
             
-            # \033[K clears the line to prevent trailing artifact characters
-            # \033[F moves the cursor UP one line so the next tick overwrites cleanly
-            sys.stdout.write(f"\r\033[K{line1}\n\033[K>> {line2[:115]}\033[F")
+            # Combine into an ultra-compact single line and truncate to exactly 119 chars to prevent \r breakage
+            full_hud = f"\r{line1} || {line2}" if line2 else f"\r{line1}"
+            
+            # \033[K clears the entire line so remnants of previous longer strings vanish
+            sys.stdout.write(f"\033[K{full_hud[:119]}")
             sys.stdout.flush()
                 
             time.sleep(0.5)
