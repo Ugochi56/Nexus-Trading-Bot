@@ -115,7 +115,7 @@ def calculate_position_size(entry_price, sl_price, risk_pct):
     lots = round(lots / step) * step
     return max(symbol_info.volume_min, min(lots, symbol_info.volume_max))
 
-def execute_trade(signal, sl_price, risk_pct, magic_num, comment_text, ai_conf=0.55, limit_price=None):
+def execute_trade(signal, sl_price, risk_pct, magic_num, comment_text, ai_conf=0.55, limit_price=None, stop_price=None):
     global virtual_ticket_counter
     
     if DYNAMIC_RISK:
@@ -140,6 +140,13 @@ def execute_trade(signal, sl_price, risk_pct, magic_num, comment_text, ai_conf=0
             action_type = mt5.TRADE_ACTION_PENDING
             order_type = mt5.ORDER_TYPE_BUY_LIMIT if signal == 'BUY' else mt5.ORDER_TYPE_SELL_LIMIT
             comment_text += f" LMT {limit_price:.1f}"
+            
+    elif stop_price:
+        is_limit_order = True  # Treat as pending
+        execution_price = stop_price
+        action_type = mt5.TRADE_ACTION_PENDING
+        order_type = mt5.ORDER_TYPE_BUY_STOP if signal == 'BUY' else mt5.ORDER_TYPE_SELL_STOP
+        comment_text += f" STP {stop_price:.1f}"
     
     lots = calculate_position_size(execution_price, sl_price, risk_pct)
     risk_dist = abs(execution_price - sl_price)
@@ -168,12 +175,16 @@ def execute_trade(signal, sl_price, risk_pct, magic_num, comment_text, ai_conf=0
     # and will crash if brackets are unbalanced or parsed incorrectly.
     final_comment = str(comment_text)[:27]
     
+    expiration = int(time.time()) + (4 * 3600) if action_type == mt5.TRADE_ACTION_PENDING else 0
     request = {
         "action": action_type, "symbol": SYMBOL, "volume": float(lots), 
         "type": order_type, "price": float(execution_price), "sl": float(sl_price), "tp": float(tp), "deviation": int(DEVIATION), 
         "magic": int(magic_num), "comment": final_comment,
-        "type_time": mt5.ORDER_TIME_GTC, "type_filling": mt5.ORDER_FILLING_IOC if action_type == mt5.TRADE_ACTION_DEAL else mt5.ORDER_FILLING_RETURN,
+        "type_time": mt5.ORDER_TIME_SPECIFIED if action_type == mt5.TRADE_ACTION_PENDING else mt5.ORDER_TIME_GTC, 
+        "type_filling": mt5.ORDER_FILLING_IOC if action_type == mt5.TRADE_ACTION_DEAL else mt5.ORDER_FILLING_RETURN,
     }
+    if action_type == mt5.TRADE_ACTION_PENDING:
+        request["expiration"] = expiration
     check = mt5.order_check(request)
     if check is None:
         print(f"CHECK FAILED: {mt5.last_error()}")

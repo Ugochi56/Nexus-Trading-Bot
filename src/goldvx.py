@@ -229,7 +229,8 @@ def main():
                                 magic_num=MAGIC_NUMBER, 
                                 comment_text=payload['comment'], 
                                 ai_conf=payload['confidence'],
-                                limit_price=payload.get('limit_price')
+                                limit_price=payload.get('limit_price'),
+                                stop_price=payload.get('stop_price')
                             )
                             # Remove manual instant call here since the global history loop handles it now
                             

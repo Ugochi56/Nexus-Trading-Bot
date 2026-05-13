@@ -13,6 +13,7 @@ class LondonBreakoutStrategy(BaseStrategy):
         self.last_signal_time = None
         self.throttle_timer = 0
         self.is_armed = False
+        self.traps_placed = False
 
     def get_trend_ai_permission(self, df_m5):
         if not USE_AI_FILTER or self.trend_model is None:
@@ -80,6 +81,7 @@ class LondonBreakoutStrategy(BaseStrategy):
             self.asian_high = None
             self.asian_low = None
             self.is_armed = False
+            self.traps_placed = False
             return {'payload': None, 'ui': "[KILLZONE DEAD]"}
 
         # 2. Execution Window (London Killzone)
@@ -101,37 +103,31 @@ class LondonBreakoutStrategy(BaseStrategy):
                 close_h1 = df_h1.iloc[-1]['close']
                 macro_trend = "UP" if close_h1 > ema_50 else "DOWN"
 
-            # Execute Breakouts
-            if current_price > self.asian_high:
-                if FILTER_LONDON_FAKEOUTS and macro_trend == "DOWN":
-                    print(f"\\n[KILLZONE] [FAKEOUT SHIELD] Ignoring Upside break. Macro Trend favors DOWN. Waiting for sweep.")
-                    self.throttle_timer = time.time()
-                    return {'payload': None, 'ui': "[JUDAS SHIELD ACTIVE]"}
+            # Execute Zero-Latency Stop Orders the moment the Killzone opens
+            if not self.traps_placed:
+                self.traps_placed = True
                 
                 ai_verdict, ai_conf = self.get_trend_ai_permission(df_m5)
+                
+                # Check Fakeout Shield first
+                if FILTER_LONDON_FAKEOUTS:
+                    if ai_verdict == 'BUY' and macro_trend == "DOWN":
+                        print(f"\\n[KILLZONE] [FAKEOUT SHIELD] Ignoring AI Buy Prediction. Macro Trend is DOWN. Waiting for Judas sweep.")
+                        ai_verdict = 'UNCERTAIN'
+                    elif ai_verdict == 'SELL' and macro_trend == "UP":
+                        print(f"\\n[KILLZONE] [FAKEOUT SHIELD] Ignoring AI Sell Prediction. Macro Trend is UP. Waiting for Judas sweep.")
+                        ai_verdict = 'UNCERTAIN'
+                
                 if ai_verdict == 'BUY':
-                    print(f"\\n[KILLZONE] [ASIAN HIGH BROKEN] Institutional Volatility Surging (BUY)")
-                    signal_payload = {'signal': 'BUY', 'sl': self.asian_low, 'confidence': ai_conf, 'comment': f"KZ BUY AI:{ai_conf:.2f}"}
-                    self.last_signal_time = last_time
+                    print(f"\\n[KILLZONE] [PRE-EMPTIVE] AI predicts UP breakout ({ai_conf:.2f}). Placing zero-latency BUY STOP trap at {self.asian_high:.2f}.")
+                    signal_payload = {'signal': 'BUY', 'sl': self.asian_low, 'stop_price': self.asian_high, 'confidence': ai_conf, 'comment': f"KZ_STOP_UP"}
+                    self.throttle_timer = time.time()
+                elif ai_verdict == 'SELL':
+                    print(f"\\n[KILLZONE] [PRE-EMPTIVE] AI predicts DOWN breakout ({ai_conf:.2f}). Placing zero-latency SELL STOP trap at {self.asian_low:.2f}.")
+                    signal_payload = {'signal': 'SELL', 'sl': self.asian_high, 'stop_price': self.asian_low, 'confidence': ai_conf, 'comment': f"KZ_STOP_DN"}
                     self.throttle_timer = time.time()
                 else:
-                    print(f"\\n[KILLZONE] [AI VETO] Breakout rejected by Neural Net ({ai_conf:.2f})")
-                    self.throttle_timer = time.time()
-                    
-            elif current_price < self.asian_low:
-                if FILTER_LONDON_FAKEOUTS and macro_trend == "UP":
-                    print(f"\\n[KILLZONE] [FAKEOUT SHIELD] Ignoring Downside break. Macro Trend favors UP. Waiting for sweep.")
-                    self.throttle_timer = time.time()
-                    return {'payload': None, 'ui': "[JUDAS SHIELD ACTIVE]"}
-                
-                ai_verdict, ai_conf = self.get_trend_ai_permission(df_m5)
-                if ai_verdict == 'SELL':
-                    print(f"\\n[KILLZONE] [ASIAN LOW BROKEN] Institutional Volatility Surging (SELL)")
-                    signal_payload = {'signal': 'SELL', 'sl': self.asian_high, 'confidence': ai_conf, 'comment': f"KZ SELL AI:{ai_conf:.2f}"}
-                    self.last_signal_time = last_time
-                    self.throttle_timer = time.time()
-                else:
-                    print(f"\\n[KILLZONE] [AI VETO] Breakout rejected by Neural Net ({ai_conf:.2f})")
+                    print(f"\\n[KILLZONE] [AI VETO] Uncertain breakout direction. Traps canceled.")
                     self.throttle_timer = time.time()
 
         return {'payload': signal_payload, 'ui': action_msg}
