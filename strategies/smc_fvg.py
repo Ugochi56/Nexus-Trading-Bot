@@ -10,6 +10,7 @@ class SMCStrategy(BaseStrategy):
         self.active_fvg = None
         self.last_traded_fvg_id = None
         self.denied_fvg_times = set()
+        self.announced_fvg_times = set()
         self.ai_throttle_timer = 0
         self.dynamic_sl_padding = 0
 
@@ -120,7 +121,9 @@ class SMCStrategy(BaseStrategy):
         if new_fvg and new_fvg['time'] != self.last_traded_fvg_id and new_fvg['time'] not in self.denied_fvg_times:
             if self.active_fvg is None or new_fvg['time'] != self.active_fvg['time']:
                 self.active_fvg = new_fvg
-                print(f"\n[SMC] [NEW ZONE]: {self.active_fvg['type']} {self.active_fvg['bottom']:.2f}-{self.active_fvg['top']:.2f}")
+                if new_fvg['time'] not in self.announced_fvg_times:
+                    print(f"\n[SMC] [NEW ZONE]: {self.active_fvg['type']} {self.active_fvg['bottom']:.2f}-{self.active_fvg['top']:.2f}")
+                    self.announced_fvg_times.add(new_fvg['time'])
 
         if self.active_fvg:
             action_msg = f"[W: {self.active_fvg['type']}]"
