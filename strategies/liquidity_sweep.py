@@ -1,13 +1,66 @@
 import pandas as pd
 import numpy as np
 from strategies.base import BaseStrategy
+from core.config import *
 
 class LiquiditySweepStrategy(BaseStrategy):
     def __init__(self, ai_model):
-        super().__init__(ai_model)
+        super().__init__("LIQUIDITY")
+        self.trend_model = ai_model
         self.lookback = 100
         self.proximity_threshold_pct = 0.0003 # 0.03% difference for extremely tight liquidity pools
         self.active_sweeps = set()
+
+    def get_trend_ai_permission(self, df_m5, df_h1, df_h4):
+        if not USE_AI_FILTER or self.trend_model is None:
+            return 'SKIP_CHECK', 0.0
+        try:
+            df = df_m5.copy()
+            if 'EMA_50' not in df.columns:
+                import pandas_ta as ta
+                df['EMA_50'] = df.ta.ema(length=50)
+                df['EMA_200'] = df.ta.ema(length=200)
+                df['RSI'] = df.ta.rsi(length=14)
+                df['ATR'] = df.ta.atr(length=14)
+                adx = df.ta.adx(length=14)
+                if adx is not None: df['ADX'] = adx['ADX_14']
+                else: df['ADX'] = 0
+
+            latest = df.iloc[-2:].copy()
+            latest['Dist_EMA_50'] = (latest['close'] - latest['EMA_50']) / latest['close']
+            latest['Dist_EMA_200'] = (latest['close'] - latest['EMA_200']) / latest['close']
+            latest['Candle_Size'] = (latest['high'] - latest['low'])
+            latest['Rel_Volatility'] = latest['Candle_Size'] / latest['ATR']
+            latest['RSI_Zone'] = 1
+            latest.loc[latest['RSI'] > 70, 'RSI_Zone'] = 2
+            latest.loc[latest['RSI'] < 30, 'RSI_Zone'] = 0
+
+            if df_h1 is not None and df_h4 is not None:
+                latest['H1_RSI'] = df_h1.ta.rsi(length=14).iloc[-1]
+                h1_ema_50 = df_h1.ta.ema(length=50).iloc[-1]
+                latest['Dist_H1'] = (latest['close'] - h1_ema_50) / latest['close']
+                adx_h4 = df_h4.ta.adx(length=14)
+                latest['H4_ADX'] = adx_h4['ADX_14'].iloc[-1] if adx_h4 is not None else 0
+            else:
+                latest['H1_RSI'] = 50
+                latest['Dist_H1'] = 0
+                latest['H4_ADX'] = 0
+
+            latest.replace([np.inf, -np.inf], 0, inplace=True)
+            latest.fillna(0, inplace=True)
+
+            feature_cols = ['Dist_EMA_50', 'Dist_EMA_200', 'Dist_H1', 'RSI', 'RSI_Zone', 'Rel_Volatility', 'ADX', 'H1_RSI', 'H4_ADX']
+            X_live = latest[feature_cols].iloc[[-1]]
+
+            probs = self.trend_model.predict_proba(X_live)
+            prob_down = probs[0][0]
+            prob_up = probs[0][1]
+
+            if prob_up >= AI_CONFIDENCE_THRESHOLD: return 'BUY', prob_up
+            elif prob_down >= AI_CONFIDENCE_THRESHOLD: return 'SELL', prob_down
+            else: return 'UNCERTAIN', max(prob_up, prob_down)
+        except Exception as e:
+            return 'SKIP_CHECK', 0.0
 
     def find_fractals(self, df):
         """Identifies Swing Highs and Swing Lows (Fractals) over a 5-candle window."""
@@ -88,10 +141,9 @@ class LiquiditySweepStrategy(BaseStrategy):
                 ui_msg = f"[BSL SWEPT: {eqh:.2f}]"
                 
                 # Check AI validation
-                features = np.zeros((1, 20))
-                confidence = self.get_ai_confidence(features) if ai_mode else 0.80
+                ai_verdict, confidence = self.get_trend_ai_permission(df_m5, df_h1, df_h4) if ai_mode else ('SELL', 0.80)
                 
-                if confidence >= 0.65:
+                if ai_verdict == 'SELL' and confidence >= 0.65:
                     payload = {
                         'signal': 'SELL',
                         'sl': current_high + (atr * 0.2), # SL just above the sweeping wick
@@ -110,10 +162,9 @@ class LiquiditySweepStrategy(BaseStrategy):
                     ui_msg = f"[SSL SWEPT: {eql:.2f}]"
                     
                     # Check AI validation
-                    features = np.zeros((1, 20))
-                    confidence = self.get_ai_confidence(features) if ai_mode else 0.80
+                    ai_verdict, confidence = self.get_trend_ai_permission(df_m5, df_h1, df_h4) if ai_mode else ('BUY', 0.80)
                     
-                    if confidence >= 0.65:
+                    if ai_verdict == 'BUY' and confidence >= 0.65:
                         payload = {
                             'signal': 'BUY',
                             'sl': current_low - (atr * 0.2), # SL just below the sweeping wick
