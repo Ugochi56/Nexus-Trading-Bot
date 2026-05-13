@@ -10,6 +10,7 @@ class LiquiditySweepStrategy(BaseStrategy):
         self.lookback = 100
         self.proximity_threshold_pct = 0.0003 # 0.03% difference for extremely tight liquidity pools
         self.active_sweeps = set()
+        self.last_traded_sweep_time = None
 
     def get_trend_ai_permission(self, df_m5, df_h1, df_h4):
         if not USE_AI_FILTER or self.trend_model is None:
@@ -130,6 +131,7 @@ class LiquiditySweepStrategy(BaseStrategy):
         current_high = df_m5['high'].iloc[-1]
         current_low = df_m5['low'].iloc[-1]
         current_close = df_m5['close'].iloc[-1]
+        current_time = df_m5['time'].iloc[-1]
 
         sweep_found = False
 
@@ -143,7 +145,7 @@ class LiquiditySweepStrategy(BaseStrategy):
                 # Check AI validation
                 ai_verdict, confidence = self.get_trend_ai_permission(df_m5, df_h1, df_h4) if ai_mode else ('SELL', 0.80)
                 
-                if ai_verdict == 'SELL' and confidence >= 0.65:
+                if ai_verdict == 'SELL' and confidence >= 0.65 and current_time != self.last_traded_sweep_time:
                     payload = {
                         'signal': 'SELL',
                         'sl': current_high + (atr * 0.2), # SL just above the sweeping wick
@@ -151,6 +153,7 @@ class LiquiditySweepStrategy(BaseStrategy):
                         'confidence': confidence,
                         'comment': f"LIQ_BSL_SWEEP"
                     }
+                    self.last_traded_sweep_time = current_time
                 break
 
         # 2. SSL Sweep (Judas Swing Down)
@@ -164,7 +167,7 @@ class LiquiditySweepStrategy(BaseStrategy):
                     # Check AI validation
                     ai_verdict, confidence = self.get_trend_ai_permission(df_m5, df_h1, df_h4) if ai_mode else ('BUY', 0.80)
                     
-                    if ai_verdict == 'BUY' and confidence >= 0.65:
+                    if ai_verdict == 'BUY' and confidence >= 0.65 and current_time != self.last_traded_sweep_time:
                         payload = {
                             'signal': 'BUY',
                             'sl': current_low - (atr * 0.2), # SL just below the sweeping wick
@@ -172,6 +175,7 @@ class LiquiditySweepStrategy(BaseStrategy):
                             'confidence': confidence,
                             'comment': f"LIQ_SSL_SWEEP"
                         }
+                        self.last_traded_sweep_time = current_time
                     break
                 
         # If no active sweep is occurring, display the nearest liquidity pools for the HUD
