@@ -9,6 +9,7 @@ class SMCChochStrategy(BaseStrategy):
         super().__init__("SMC_CHOCH")
         self.trend_model = ai_model
         self.last_traded_choch_time = None
+        self.last_traded_break_price = None
         self.throttle_timer = 0
         self.structural_lookback = 40
 
@@ -125,7 +126,7 @@ class SMCChochStrategy(BaseStrategy):
             preceding_lows = [p for p in structure if p['type'] == 'LOW' and p['idx'] < last_high['idx']]
             if preceding_lows:
                 target_low = preceding_lows[-1]
-                if current_candle['close'] < target_low['price'] and current_candle['time'] != self.last_traded_choch_time:
+                if current_candle['close'] < target_low['price'] and target_low['price'] != self.last_traded_break_price:
                     # Bearish CHOCH Confirmed
                     ai_verdict, ai_conf = self.get_trend_ai_permission(df_m5)
                     if ai_verdict == 'SELL':
@@ -135,6 +136,7 @@ class SMCChochStrategy(BaseStrategy):
                             print(f"      Sweep at {last_high['price']:.2f}, Structural Break at {target_low['price']:.2f}")
                             print(f"      Placing Limit Order at Origin OB: {ob['bottom']:.2f}-{ob['top']:.2f}")
                             self.last_traded_choch_time = current_candle['time']
+                            self.last_traded_break_price = target_low['price']
                             self.throttle_timer = time.time()
                             
                             sl = ob['top'] + (atr * getattr(sys.modules['core.config'], 'SL_ATR_MULTIPLIER', 1.5))
@@ -148,7 +150,7 @@ class SMCChochStrategy(BaseStrategy):
             preceding_highs = [p for p in structure if p['type'] == 'HIGH' and p['idx'] < last_low['idx']]
             if preceding_highs:
                 target_high = preceding_highs[-1]
-                if current_candle['close'] > target_high['price'] and current_candle['time'] != self.last_traded_choch_time:
+                if current_candle['close'] > target_high['price'] and target_high['price'] != self.last_traded_break_price:
                     # Bullish CHOCH Confirmed
                     ai_verdict, ai_conf = self.get_trend_ai_permission(df_m5)
                     if ai_verdict == 'BUY':
@@ -158,6 +160,7 @@ class SMCChochStrategy(BaseStrategy):
                             print(f"      Sweep at {last_low['price']:.2f}, Structural Break at {target_high['price']:.2f}")
                             print(f"      Placing Limit Order at Origin OB: {ob['bottom']:.2f}-{ob['top']:.2f}")
                             self.last_traded_choch_time = current_candle['time']
+                            self.last_traded_break_price = target_high['price']
                             self.throttle_timer = time.time()
                             
                             sl = ob['bottom'] - (atr * getattr(sys.modules['core.config'], 'SL_ATR_MULTIPLIER', 1.5))
