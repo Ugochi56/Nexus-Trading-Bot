@@ -215,7 +215,7 @@ def main():
                         res = strategy.evaluate(
                             df_m5=df_m5, df_h1=df_h1, df_h4=df_h4, df_adx=df_adx, 
                             current_price=curr_price, current_risk=current_risk, atr=current_atr,
-                            ai_mode=ai_mode
+                            ai_mode=ai_mode, server_hour=server_hour
                         )
                         ui_msg = res.get('ui')
                         if ui_msg and not ui_msg.startswith("[SCAN]") and not ui_msg.startswith("[OB_SCAN]"):
