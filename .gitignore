@@ -38,3 +38,5 @@ data/nexus_analytics_Apr_2026.txt
 data/nexus_analytics_May_2026.txt
 check/check_history.py
 scratch_status.py
+scratch/check_mt5_time.py
+scratch/check_mt5_time2.py
