@@ -115,7 +115,7 @@ def calculate_position_size(entry_price, sl_price, risk_pct):
     lots = round(lots / step) * step
     return max(symbol_info.volume_min, min(lots, symbol_info.volume_max))
 
-def execute_trade(signal, sl_price, risk_pct, magic_num, comment_text, ai_conf=0.55, limit_price=None, stop_price=None):
+def execute_trade(signal, sl_price, risk_pct, magic_num=999000, comment_text="", ai_conf=0.0, limit_price=None, stop_price=None, tp_price=None):
     global virtual_ticket_counter
     
     if DYNAMIC_RISK:
@@ -150,7 +150,18 @@ def execute_trade(signal, sl_price, risk_pct, magic_num, comment_text, ai_conf=0
     
     lots = calculate_position_size(execution_price, sl_price, risk_pct)
     risk_dist = abs(execution_price - sl_price)
-    tp = execution_price + (risk_dist * RISK_REWARD_RATIO) if signal == 'BUY' else execution_price - (risk_dist * RISK_REWARD_RATIO)
+    
+    # Dynamic Structural RR logic
+    tp = None
+    if tp_price is not None and risk_dist > 0:
+        implied_rr = abs(tp_price - execution_price) / risk_dist
+        if implied_rr >= getattr(sys.modules['core.config'], 'MIN_DYNAMIC_RR', 1.5):
+            tp = tp_price
+            comment_text += f" STR:{implied_rr:.1f}R"
+            
+    # Fallback to pure math if no valid structural TP exists
+    if tp is None:
+        tp = execution_price + (risk_dist * RISK_REWARD_RATIO) if signal == 'BUY' else execution_price - (risk_dist * RISK_REWARD_RATIO)
     
     exec_mode = "LIMIT" if is_limit_order else "MARKET"
     print(f"\n[EXEC] {exec_mode} ({comment_text}) | Risk {risk_pct:.2f}%")

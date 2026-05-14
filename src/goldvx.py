@@ -233,7 +233,8 @@ def main():
                                 comment_text=payload['comment'], 
                                 ai_conf=payload['confidence'],
                                 limit_price=payload.get('limit_price'),
-                                stop_price=payload.get('stop_price')
+                                stop_price=payload.get('stop_price'),
+                                tp_price=payload.get('tp_price')
                             )
                             # Remove manual instant call here since the global history loop handles it now
                             

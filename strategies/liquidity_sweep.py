@@ -146,10 +146,12 @@ class LiquiditySweepStrategy(BaseStrategy):
                 ai_verdict, confidence = self.get_trend_ai_permission(df_m5, df_h1, df_h4) if ai_mode else ('SELL', 0.80)
                 
                 if ai_verdict == 'SELL' and confidence >= 0.65 and current_time != self.last_traded_sweep_time:
+                    target_tp = max([e for e in eql_zones if e < current_price], default=None)
                     payload = {
                         'signal': 'SELL',
                         'sl': current_high + (atr * 0.2), # SL just above the sweeping wick
                         'limit_price': eqh, # Limit order precisely at the swept liquidity line
+                        'tp_price': target_tp, # Structural Target: Nearest SSL
                         'confidence': confidence,
                         'comment': f"LIQ_BSL_SWEEP"
                     }
@@ -168,10 +170,12 @@ class LiquiditySweepStrategy(BaseStrategy):
                     ai_verdict, confidence = self.get_trend_ai_permission(df_m5, df_h1, df_h4) if ai_mode else ('BUY', 0.80)
                     
                     if ai_verdict == 'BUY' and confidence >= 0.65 and current_time != self.last_traded_sweep_time:
+                        target_tp = min([e for e in eqh_zones if e > current_price], default=None)
                         payload = {
                             'signal': 'BUY',
                             'sl': current_low - (atr * 0.2), # SL just below the sweeping wick
                             'limit_price': eql, # Limit order precisely at the swept liquidity line
+                            'tp_price': target_tp, # Structural Target: Nearest BSL
                             'confidence': confidence,
                             'comment': f"LIQ_SSL_SWEEP"
                         }

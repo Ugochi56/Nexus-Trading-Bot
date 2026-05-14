@@ -133,9 +133,9 @@ class SMCChochStrategy(BaseStrategy):
                             self.last_traded_choch_time = current_candle['time']
                             self.throttle_timer = time.time()
                             
-                            sl = ob['top'] + (atr * 1.0)
+                            sl = ob['top'] + (atr * getattr(sys.modules['core.config'], 'SL_ATR_MULTIPLIER', 1.5))
                             limit_entry = ob['bottom']
-                            signal_payload = {'signal': 'SELL', 'sl': sl, 'limit_price': limit_entry, 'confidence': ai_conf, 'comment': f"CHOCH_DN:{ai_conf:.2f}"}
+                            signal_payload = {'signal': 'SELL', 'sl': sl, 'limit_price': limit_entry, 'tp_price': target_low['price'], 'confidence': ai_conf, 'comment': f"CHOCH_DN:{ai_conf:.2f}"}
                             return {'payload': signal_payload, 'ui': "[BEARISH CHOCH]"}
 
         # 3. Detect Bullish CHOCH
@@ -156,9 +156,9 @@ class SMCChochStrategy(BaseStrategy):
                             self.last_traded_choch_time = current_candle['time']
                             self.throttle_timer = time.time()
                             
-                            sl = ob['bottom'] - (atr * 1.0)
+                            sl = ob['bottom'] - (atr * getattr(sys.modules['core.config'], 'SL_ATR_MULTIPLIER', 1.5))
                             limit_entry = ob['top']
-                            signal_payload = {'signal': 'BUY', 'sl': sl, 'limit_price': limit_entry, 'confidence': ai_conf, 'comment': f"CHOCH_UP:{ai_conf:.2f}"}
+                            signal_payload = {'signal': 'BUY', 'sl': sl, 'limit_price': limit_entry, 'tp_price': target_high['price'], 'confidence': ai_conf, 'comment': f"CHOCH_UP:{ai_conf:.2f}"}
                             return {'payload': signal_payload, 'ui': "[BULLISH CHOCH]"}
 
         return {'payload': signal_payload, 'ui': action_msg}
