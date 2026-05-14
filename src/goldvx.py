@@ -24,6 +24,7 @@ from strategies.vwap_reversion import VWAPReversionStrategy
 from strategies.bb_breakout import BBBreakoutStrategy
 from strategies.london_breakout import LondonBreakoutStrategy
 from strategies.liquidity_sweep import LiquiditySweepStrategy
+from strategies.smc_choch import SMCChochStrategy
 import MetaTrader5 as mt5
 
 def load_ai_models():
@@ -52,7 +53,8 @@ def main():
         "RSI_REVERSION": RSIReversionStrategy(reversal_model),
         "VWAP_REVERSION": VWAPReversionStrategy(),
         "BB_BREAKOUT": BBBreakoutStrategy(),
-        "LONDON_BREAKOUT": LondonBreakoutStrategy(trend_model)
+        "LONDON_BREAKOUT": LondonBreakoutStrategy(trend_model),
+        "SMC_CHOCH": SMCChochStrategy(trend_model)
     }
     
     last_eval_time = 0 
@@ -72,7 +74,7 @@ def main():
     
     print("\n" + "="*55)
     print("[NEXUS ONLINE]")
-    print("[ENGINES: SMC_FVG, SMC_OB, RSI, VWAP, BB_BREAKOUT, LIQUIDITY_SWEEP]")
+    print("[ENGINES: SMC_FVG, SMC_OB, RSI, VWAP, BB_BREAKOUT, LIQUIDITY_SWEEP, SMC_CHOCH]")
     print("="*55 + "\n")
 
     while True:

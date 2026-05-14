@@ -57,3 +57,44 @@ def calculate_poc(df, num_bins=50):
     except Exception as e:
         print(f"[ERROR] POC Calculation failed: {e}")
         return 0.0
+
+def map_market_structure(df, lookback=2):
+    """
+    Calculates Pivot Highs and Lows (Fractals) to map market structure (HH, HL, LH, LL).
+    lookback=2 means a pivot must be higher/lower than the 2 candles before and after it.
+    Returns: A list of chronological structural pivot dictionaries.
+    """
+    pivots = []
+    for i in range(lookback, len(df) - lookback):
+        is_high = True
+        is_low = True
+        current_high = df.iloc[i]['high']
+        current_low = df.iloc[i]['low']
+        
+        for j in range(1, lookback + 1):
+            if df.iloc[i-j]['high'] >= current_high or df.iloc[i+j]['high'] >= current_high:
+                is_high = False
+            if df.iloc[i-j]['low'] <= current_low or df.iloc[i+j]['low'] <= current_low:
+                is_low = False
+                
+        if is_high:
+            pivots.append({'type': 'HIGH', 'price': current_high, 'time': df.iloc[i]['time'], 'idx': i})
+        if is_low:
+            pivots.append({'type': 'LOW', 'price': current_low, 'time': df.iloc[i]['time'], 'idx': i})
+            
+    # Classify structural shifts
+    structure = []
+    last_high = None
+    last_low = None
+    
+    for p in pivots:
+        if p['type'] == 'HIGH':
+            p['struct'] = 'HH' if (last_high is None or p['price'] > last_high['price']) else 'LH'
+            last_high = p
+            structure.append(p)
+        elif p['type'] == 'LOW':
+            p['struct'] = 'LL' if (last_low is None or p['price'] < last_low['price']) else 'HL'
+            last_low = p
+            structure.append(p)
+            
+    return structure
