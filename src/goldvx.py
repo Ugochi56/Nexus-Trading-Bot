@@ -180,11 +180,11 @@ def main():
             # Phase 2: Time-Based Strategy Pruning
             if current_session == "ASIAN":
                 if AUTO_SWITCH:
-                    active_strats = ["SMC_FVG", "SMC_OB", "RSI_REVERSION", "VWAP_REVERSION", "LIQUIDITY_SWEEP"]
+                    active_strats = ["SMC_FVG", "SMC_OB", "RSI_REVERSION", "VWAP_REVERSION", "LIQUIDITY_SWEEP", "SMC_CHOCH"]
                     regime_icon = "[ASIAN-RANGE]"
             else:
                 if AUTO_SWITCH:
-                    if curr_adx > ADX_TREND_START: active_strats = ["SMC_FVG", "SMC_OB", "BB_BREAKOUT", "LIQUIDITY_SWEEP"]; regime_icon = "[TREND]"
+                    if curr_adx > ADX_TREND_START: active_strats = ["SMC_FVG", "SMC_OB", "BB_BREAKOUT", "LIQUIDITY_SWEEP", "SMC_CHOCH"]; regime_icon = "[TREND]"
                     elif curr_adx < ADX_RANGE_START: active_strats = ["RSI_REVERSION", "VWAP_REVERSION"]; regime_icon = "[RANGE]"
                     else: active_strats = ["RSI_REVERSION", "VWAP_REVERSION", "BB_BREAKOUT"]; regime_icon = "[NEUTRAL]"
 
