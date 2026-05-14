@@ -14,7 +14,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.system("")
 
 from core.config import *
-from core.utils import is_us_dst, get_session_name
+from core.utils import is_us_dst, get_session_name, get_broker_hour_from_utc
 from core.indicators import calculate_atr_simple, calculate_rsi_simple, calculate_adx_simple
 from engine.mt5_interface import connect_mt5, check_daily_drawdown, get_market_data, execute_trade, manage_open_positions, manage_pending_orders, check_volatility_guard, close_all_positions, get_dynamic_kelly_risk
 from engine.news_filter import fetch_economic_news, is_news_blackout
