@@ -124,6 +124,16 @@ def execute_trade(signal, sl_price, risk_pct, magic_num=999000, comment_text="",
 
     if risk_pct <= 0: return False
     tick = mt5.symbol_info_tick(SYMBOL)
+    if tick is None: return False
+    
+    # Spread Filter: Reject trade if broker spread exceeds safety threshold
+    current_spread = abs(tick.ask - tick.bid)
+    symbol_info = mt5.symbol_info(SYMBOL)
+    spread_points = current_spread / symbol_info.point if symbol_info and symbol_info.point > 0 else 0
+    if spread_points > MAX_SPREAD_POINTS:
+        print(f"\n[SPREAD] Trade REJECTED. Spread {spread_points:.0f} pts > {MAX_SPREAD_POINTS} pts limit. Broker is gouging.")
+        return False
+    
     price = tick.ask if signal == 'BUY' else tick.bid
     
     # Hybrid Execution Logic: Use Limit Order if AI confidence is extremely high and limit price is valid
