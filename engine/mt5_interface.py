@@ -38,6 +38,19 @@ def check_daily_drawdown():
     current_d1_time = int(rates[0]['time'])
     cached_d1_time = nexus_state.get('last_d1_time', -1)
     
+    # Fresh process start: Always re-sync equity baseline to prevent stale halt loops
+    if not hasattr(check_daily_drawdown, '_startup_synced'):
+        check_daily_drawdown._startup_synced = True
+        old_eq = nexus_state.get('daily_start_equity', 0)
+        nexus_state.set('daily_start_equity', account.equity)
+        nexus_state.set('last_d1_time', current_d1_time)
+        nexus_state.set('is_halted', False)
+        if old_eq > 0 and old_eq != account.equity:
+            print(f"\n[DAY] Equity re-synced on restart: ${old_eq:.2f} → ${account.equity:.2f}")
+        else:
+            print(f"\n[DAY] New Broker Day! Equity: ${account.equity:.2f} (Synced to MT5 Clock)")
+        return True
+    
     if current_d1_time != cached_d1_time:
         nexus_state.set('daily_start_equity', account.equity)
         nexus_state.set('last_d1_time', current_d1_time)
@@ -46,16 +59,6 @@ def check_daily_drawdown():
         return True
         
     if nexus_state.get('is_halted', False):
-        # Check if this is a fresh restart (bot was restarted by the user)
-        # If so, give the user a fresh daily window from current equity
-        if not hasattr(check_daily_drawdown, '_halt_acknowledged'):
-            check_daily_drawdown._halt_acknowledged = True
-            old_eq = nexus_state.get('daily_start_equity', account.equity)
-            print(f"\n[HALT] Previous daily limit was hit (Start: ${old_eq:.2f} → Now: ${account.equity:.2f}).")
-            print(f"[HALT] Resetting daily equity to ${account.equity:.2f} for fresh monitoring.")
-            nexus_state.set('daily_start_equity', account.equity)
-            nexus_state.set('is_halted', False)
-            return True
         print(f"\r[HALT] Terminal structurally locked for the day. Wait for reset.".ljust(90), end='')
         return False
         
@@ -66,7 +69,6 @@ def check_daily_drawdown():
     if loss_percent >= MAX_DAILY_LOSS_PERCENT:
         print(f"\n[HALT] DAILY LIMIT HIT! (-{loss_percent:.2f}%). EXECUTING GLOBAL LIQUIDATION...")
         nexus_state.set('is_halted', True)
-        check_daily_drawdown._halt_acknowledged = False  # Reset so next restart can clear it
         close_all_positions(reason="DAILY_LIMIT_REACHED")
         return False 
     return True
