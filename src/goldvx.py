@@ -145,7 +145,7 @@ def main():
                 time.sleep(10); continue
                 
             server_time = datetime.fromtimestamp(tick.time, timezone.utc)
-            server_hour = server_time.hour
+            server_hour = get_broker_hour_from_utc(server_time)
             
             if CLOSE_ALL_ON_FRIDAY and server_time.weekday() == 4 and server_hour >= FRIDAY_CLOSE_HOUR:
                 if not market_closed_for_weekend:
@@ -157,10 +157,8 @@ def main():
             if market_closed_for_weekend and server_time.weekday() not in [4, 5]:
                 market_closed_for_weekend = False
 
-            is_dst_active = False
-            if AUTO_DST_ADJUST and is_us_dst(server_time):
-                server_hour = (server_hour + DST_SHIFT_HOURS) % 24
-                is_dst_active = True
+            # (DST shifts are now handled natively inside get_broker_hour_from_utc)
+            is_dst_active = is_us_dst(server_time) if AUTO_DST_ADJUST else False
             
             current_session = get_session_name(server_hour)
             sess_map = {"ASIAN": "ASIA", "LONDON": "LDN", "NY_LONDON_OVERLAP": "OLAP", "NEW_YORK": "NY", "ROLLOVER": "ROLL"}
