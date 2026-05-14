@@ -84,6 +84,7 @@ class VWAPReversionStrategy(BaseStrategy):
                 signal_payload = {
                     'signal': 'SELL', 
                     'sl': current_price + sl_padding, 
+                    'tp_price': vwap_val,
                     'risk_override': r_pct, 
                     'confidence': 0.85, 
                     'comment': "VWAP Stretch SELL"
@@ -97,6 +98,7 @@ class VWAPReversionStrategy(BaseStrategy):
                 signal_payload = {
                     'signal': 'BUY', 
                     'sl': current_price - sl_padding, 
+                    'tp_price': vwap_val,
                     'risk_override': r_pct, 
                     'confidence': 0.85, 
                     'comment': "VWAP Stretch BUY"

@@ -92,6 +92,11 @@ class RSIReversionStrategy(BaseStrategy):
         if 'rsi' not in df_m5.columns:
             df_m5['rsi'] = ta.rsi(df_m5['close'], length=14)
             curr_rsi = df_m5.iloc[-1]['rsi']
+            
+        if 'sma_14' not in df_m5.columns:
+            df_m5['sma_14'] = ta.sma(df_m5['close'], length=14)
+            
+        curr_sma = df_m5.iloc[-1].get('sma_14', current_price)
 
         action_msg = f"[RSI: {curr_rsi:.0f}]"
 
@@ -104,12 +109,12 @@ class RSIReversionStrategy(BaseStrategy):
                 
                 if curr_rsi <= RSI_OVERSOLD and ai_verdict == 'BUY':
                     sl = current_price - self.dynamic_sl_padding
-                    signal_payload = {'signal': 'BUY', 'sl': sl, 'risk_override': scalp_risk, 'confidence': ai_conf, 'comment': f"RSI-AI:{ai_conf:.2f}"}
+                    signal_payload = {'signal': 'BUY', 'sl': sl, 'tp_price': curr_sma, 'risk_override': scalp_risk, 'confidence': ai_conf, 'comment': f"RSI-AI:{ai_conf:.2f}"}
                     self.last_rsi_signal_time = last_candle_time
                     
                 elif curr_rsi >= RSI_OVERBOUGHT and ai_verdict == 'SELL':
                     sl = current_price + self.dynamic_sl_padding
-                    signal_payload = {'signal': 'SELL', 'sl': sl, 'risk_override': scalp_risk, 'confidence': ai_conf, 'comment': f"RSI-AI:{ai_conf:.2f}"}
+                    signal_payload = {'signal': 'SELL', 'sl': sl, 'tp_price': curr_sma, 'risk_override': scalp_risk, 'confidence': ai_conf, 'comment': f"RSI-AI:{ai_conf:.2f}"}
                     self.last_rsi_signal_time = last_candle_time
 
         return {'payload': signal_payload, 'ui': action_msg}

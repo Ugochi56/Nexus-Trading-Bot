@@ -2,7 +2,7 @@ from strategies.base import BaseStrategy
 from core.config import *
 import numpy as np
 import time
-from core.indicators import calculate_poc
+from core.indicators import calculate_poc, map_market_structure
 
 class SMCOrderBlockStrategy(BaseStrategy):
     def __init__(self, ai_model=None):
@@ -164,6 +164,11 @@ class SMCOrderBlockStrategy(BaseStrategy):
         signal_payload = None
         action_msg = f"[OB_SCAN] {trend}"
         
+        structure = map_market_structure(df_m5, lookback=2)
+        target_high = min([p['price'] for p in structure if p['type'] == 'HIGH' and p['price'] > current_price], default=None)
+        target_low = max([p['price'] for p in structure if p['type'] == 'LOW' and p['price'] < current_price], default=None)
+        
+        
         # Structural SL padding (Fractional offset to avoid broker spread-hunting)
         # Using Structural Wick Low/High for primary SL, slightly padded by 0.2 ATR
         spread_padding = atr * 0.2
@@ -197,13 +202,13 @@ class SMCOrderBlockStrategy(BaseStrategy):
                             structural_sl = ob['bottom'] - spread_padding
                             # Ensure limit price is not above current price to prevent immediate market execution of limits
                             safe_limit_price = min(ob['poc'], current_price - spread_padding)
-                            signal_payload = {'signal': 'BUY', 'sl': structural_sl, 'limit_price': safe_limit_price, 'confidence': ai_conf, 'comment': f"OB AI:{ai_conf:.2f}"}
+                            signal_payload = {'signal': 'BUY', 'sl': structural_sl, 'limit_price': safe_limit_price, 'tp_price': target_high, 'confidence': ai_conf, 'comment': f"OB AI:{ai_conf:.2f}"}
                             self.last_traded_ob_time = ob['time']
                             is_valid = False 
                         elif ai_verdict == 'SELL' and ai_mode == 'OFFENSIVE':
                             print(f"\n[OB] [AI TRAP INVERSION]: Front-running M5 BUY Trap into Macro SELL")
                             structural_sl = ob['top'] + spread_padding
-                            signal_payload = {'signal': 'SELL', 'sl': structural_sl, 'confidence': ai_conf, 'comment': "TRAP SELL OB"}
+                            signal_payload = {'signal': 'SELL', 'sl': structural_sl, 'tp_price': target_low, 'confidence': ai_conf, 'comment': "TRAP SELL OB"}
                             self.last_traded_ob_time = ob['time']
                             is_valid = False
                         else:
@@ -225,13 +230,13 @@ class SMCOrderBlockStrategy(BaseStrategy):
                         if ai_verdict == 'SELL':
                             structural_sl = ob['top'] + spread_padding
                             safe_limit_price = max(ob['poc'], current_price + spread_padding)
-                            signal_payload = {'signal': 'SELL', 'sl': structural_sl, 'limit_price': safe_limit_price, 'confidence': ai_conf, 'comment': f"OB AI:{ai_conf:.2f}"}
+                            signal_payload = {'signal': 'SELL', 'sl': structural_sl, 'limit_price': safe_limit_price, 'tp_price': target_low, 'confidence': ai_conf, 'comment': f"OB AI:{ai_conf:.2f}"}
                             self.last_traded_ob_time = ob['time']
                             is_valid = False
                         elif ai_verdict == 'BUY' and ai_mode == 'OFFENSIVE':
                             print(f"\n[OB] [AI TRAP INVERSION]: Front-running M5 SELL Trap into Macro BUY")
                             structural_sl = ob['bottom'] - spread_padding
-                            signal_payload = {'signal': 'BUY', 'sl': structural_sl, 'confidence': ai_conf, 'comment': "TRAP BUY OB"}
+                            signal_payload = {'signal': 'BUY', 'sl': structural_sl, 'tp_price': target_high, 'confidence': ai_conf, 'comment': "TRAP BUY OB"}
                             self.last_traded_ob_time = ob['time']
                             is_valid = False
                         else:
