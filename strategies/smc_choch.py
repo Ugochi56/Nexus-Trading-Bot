@@ -1,3 +1,4 @@
+import sys
 from strategies.base import BaseStrategy
 from core.config import *
 from core.indicators import map_market_structure, calculate_poc
@@ -42,11 +43,14 @@ class SMCChochStrategy(BaseStrategy):
             latest['RSI_Zone'] = 1
             latest.loc[latest['RSI'] > 70, 'RSI_Zone'] = 2
             latest.loc[latest['RSI'] < 30, 'RSI_Zone'] = 0
+            # H1/H4 proxies using M5 EMA for model shape consistency
+            latest['H1_RSI'] = latest['RSI']  # Proxy: use M5 RSI
+            latest['H4_ADX'] = latest['ADX']  # Proxy: use M5 ADX
 
             latest.replace([np.inf, -np.inf], 0, inplace=True)
             latest.fillna(0, inplace=True)
 
-            feature_cols = ['Dist_EMA_50', 'Dist_EMA_200', 'Dist_H1', 'RSI', 'RSI_Zone', 'Rel_Volatility', 'ADX']
+            feature_cols = ['Dist_EMA_50', 'Dist_EMA_200', 'Dist_H1', 'RSI', 'RSI_Zone', 'Rel_Volatility', 'ADX', 'H1_RSI', 'H4_ADX']
             X_live = latest[feature_cols].iloc[[-1]]
 
             probs = self.trend_model.predict_proba(X_live)

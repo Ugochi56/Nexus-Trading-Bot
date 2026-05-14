@@ -112,22 +112,22 @@ class LondonBreakoutStrategy(BaseStrategy):
                 # Check Fakeout Shield first
                 if FILTER_LONDON_FAKEOUTS:
                     if ai_verdict == 'BUY' and macro_trend == "DOWN":
-                        print(f"\\n[KILLZONE] [FAKEOUT SHIELD] Ignoring AI Buy Prediction. Macro Trend is DOWN. Waiting for Judas sweep.")
+                        print(f"\n[KILLZONE] [FAKEOUT SHIELD] Ignoring AI Buy Prediction. Macro Trend is DOWN. Waiting for Judas sweep.")
                         ai_verdict = 'UNCERTAIN'
                     elif ai_verdict == 'SELL' and macro_trend == "UP":
-                        print(f"\\n[KILLZONE] [FAKEOUT SHIELD] Ignoring AI Sell Prediction. Macro Trend is UP. Waiting for Judas sweep.")
+                        print(f"\n[KILLZONE] [FAKEOUT SHIELD] Ignoring AI Sell Prediction. Macro Trend is UP. Waiting for Judas sweep.")
                         ai_verdict = 'UNCERTAIN'
                 
                 if ai_verdict == 'BUY':
-                    print(f"\\n[KILLZONE] [PRE-EMPTIVE] AI predicts UP breakout ({ai_conf:.2f}). Placing zero-latency BUY STOP trap at {self.asian_high:.2f}.")
+                    print(f"\n[KILLZONE] [PRE-EMPTIVE] AI predicts UP breakout ({ai_conf:.2f}). Placing zero-latency BUY STOP trap at {self.asian_high:.2f}.")
                     signal_payload = {'signal': 'BUY', 'sl': self.asian_low, 'stop_price': self.asian_high, 'confidence': ai_conf, 'comment': f"KZ_STOP_UP"}
                     self.throttle_timer = time.time()
                 elif ai_verdict == 'SELL':
-                    print(f"\\n[KILLZONE] [PRE-EMPTIVE] AI predicts DOWN breakout ({ai_conf:.2f}). Placing zero-latency SELL STOP trap at {self.asian_low:.2f}.")
+                    print(f"\n[KILLZONE] [PRE-EMPTIVE] AI predicts DOWN breakout ({ai_conf:.2f}). Placing zero-latency SELL STOP trap at {self.asian_low:.2f}.")
                     signal_payload = {'signal': 'SELL', 'sl': self.asian_high, 'stop_price': self.asian_low, 'confidence': ai_conf, 'comment': f"KZ_STOP_DN"}
                     self.throttle_timer = time.time()
                 else:
-                    print(f"\\n[KILLZONE] [AI VETO] Uncertain breakout direction. Traps canceled.")
+                    print(f"\n[KILLZONE] [AI VETO] Uncertain breakout direction. Traps canceled.")
                     self.throttle_timer = time.time()
 
         return {'payload': signal_payload, 'ui': action_msg}

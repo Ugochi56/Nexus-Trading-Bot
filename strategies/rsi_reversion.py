@@ -69,7 +69,7 @@ class RSIReversionStrategy(BaseStrategy):
             latest.replace([np.inf, -np.inf], 0, inplace=True)
             latest.fillna(0, inplace=True)
             
-            features = ['Dist_EMA_50', 'Dist_EMA_200', 'Dist_H1', 'RSI', 'Rel_Volatility', 'ADX', 'H1_RSI', 'H4_ADX']
+            features = ['Dist_EMA_50', 'Dist_EMA_200', 'Dist_H1', 'RSI', 'RSI_Zone', 'Rel_Volatility', 'ADX', 'H1_RSI', 'H4_ADX']
             X_live = latest[features]
             
             probs = self.reversal_model.predict_proba(X_live)
