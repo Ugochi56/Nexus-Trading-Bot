@@ -209,10 +209,9 @@ class SMCOrderBlockStrategy(BaseStrategy):
                         else:
                             if ai_verdict == 'SELL': reason = "Predicts trend reversal (DOWN)"
                             else: reason = f"Uncertain market (Score < {AI_CONFIDENCE_THRESHOLD})"
-                            spam_key = f"BUY_{ob['bottom']}_{reason}"
-                            if getattr(self, 'last_spam', '') != spam_key:
+                            if time.time() - getattr(self, 'last_print_time', 0) > 120.0:
                                 print(f"\n[OB] [AI DENIED OB BUY] ({ai_conf:.2f}) -> {reason}")
-                                self.last_spam = spam_key
+                                self.last_print_time = time.time()
 
                 elif ob['type'] == 'SELL':
                     if current_price > ob['top']: 
@@ -238,10 +237,9 @@ class SMCOrderBlockStrategy(BaseStrategy):
                         else:
                             if ai_verdict == 'BUY': reason = "Predicts trend reversal (UP)"
                             else: reason = f"Uncertain market (Score < {AI_CONFIDENCE_THRESHOLD})"
-                            spam_key = f"SELL_{ob['top']}_{reason}"
-                            if getattr(self, 'last_spam', '') != spam_key:
+                            if time.time() - getattr(self, 'last_print_time', 0) > 120.0:
                                 print(f"\n[OB] [AI DENIED OB SELL] ({ai_conf:.2f}) -> {reason}")
-                                self.last_spam = spam_key
+                                self.last_print_time = time.time()
                 
                 if is_valid:
                     valid_obs.append(ob)
