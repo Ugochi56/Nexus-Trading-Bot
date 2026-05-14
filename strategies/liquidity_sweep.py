@@ -116,7 +116,7 @@ class LiquiditySweepStrategy(BaseStrategy):
                 
         return eqh_zones, eql_zones
 
-    def evaluate(self, df_m5, df_h1, df_h4, df_adx, current_price, current_risk, atr, ai_mode=True):
+    def evaluate(self, df_m5, df_h1, df_h4, df_adx, current_price, current_risk, atr, ai_mode=True, **kwargs):
         if len(df_m5) < self.lookback + 5:
             return {'ui': ''}
 
