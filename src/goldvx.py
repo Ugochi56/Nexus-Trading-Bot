@@ -3,7 +3,9 @@ import sys
 import os
 import joblib
 import shutil
-from datetime import datetime, timedelta
+import pandas as pd
+import numpy as np
+from datetime import datetime, timezone, timedelta
 
 # Add the project root to sys.path so 'core', 'engine' and 'strategies' can be found
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -142,7 +144,7 @@ def main():
                 for strat in strategies.values(): strat.reset()
                 time.sleep(10); continue
                 
-            server_time = datetime.fromtimestamp(tick.time)
+            server_time = datetime.fromtimestamp(tick.time, timezone.utc)
             server_hour = server_time.hour
             
             if CLOSE_ALL_ON_FRIDAY and server_time.weekday() == 4 and server_hour >= FRIDAY_CLOSE_HOUR:
