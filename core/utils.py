@@ -8,7 +8,8 @@ def is_us_dst(date_obj):
     march_start = march_start.replace(day=14 - march_start.weekday()) 
     nov_end = datetime(year, 11, 1)
     nov_end = nov_end.replace(day=nov_end.day + (6 - nov_end.weekday()) % 7) 
-    return march_start <= date_obj < nov_end
+    naive_date = date_obj.replace(tzinfo=None)
+    return march_start <= naive_date < nov_end
 
 def get_session_name(hour):
     if ASIAN_OPEN_HOUR <= hour < 8: return "ASIAN"
