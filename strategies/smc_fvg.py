@@ -9,6 +9,7 @@ class SMCStrategy(BaseStrategy):
         super().__init__("SMC")
         self.trend_model = ai_model
         self.active_fvg = None
+        self.active_ifvg = None
         self.last_traded_fvg_id = None
         self.denied_fvg_times = set()
         self.announced_fvg_times = set()
@@ -134,7 +135,8 @@ class SMCStrategy(BaseStrategy):
             action_msg = f"[W: {self.active_fvg['type']}]"
             if self.active_fvg['type'] == 'BUY':
                 if current_price < self.active_fvg['bottom']: 
-                    print(f"\n[SMC] [ZONE BROKEN]: BUY {self.active_fvg['bottom']:.2f}-{self.active_fvg['top']:.2f}")
+                    print(f"\n[SMC] [ZONE BROKEN -> iFVG]: Bullish FVG Inverted to Bearish iFVG")
+                    self.active_ifvg = {'type': 'SELL', 'top': self.active_fvg['top'], 'bottom': self.active_fvg['bottom'], 'time': self.active_fvg['time']}
                     self.denied_fvg_times.add(self.active_fvg['time'])
                     self.active_fvg = None
                 
@@ -173,7 +175,8 @@ class SMCStrategy(BaseStrategy):
 
             elif self.active_fvg['type'] == 'SELL':
                 if current_price > self.active_fvg['top']: 
-                    print(f"\n[SMC] [ZONE BROKEN]: SELL {self.active_fvg['bottom']:.2f}-{self.active_fvg['top']:.2f}")
+                    print(f"\n[SMC] [ZONE BROKEN -> iFVG]: Bearish FVG Inverted to Bullish iFVG")
+                    self.active_ifvg = {'type': 'BUY', 'top': self.active_fvg['top'], 'bottom': self.active_fvg['bottom'], 'time': self.active_fvg['time']}
                     self.denied_fvg_times.add(self.active_fvg['time'])
                     self.active_fvg = None
                     
@@ -209,5 +212,26 @@ class SMCStrategy(BaseStrategy):
                                 self.last_spam = spam_key
                             self.denied_fvg_times.add(self.active_fvg['time'])
                             self.active_fvg = None
+
+        if self.active_ifvg:
+            action_msg = f"[iFVG W: {self.active_ifvg['type']}]"
+            if self.active_ifvg['type'] == 'SELL':
+                if current_price > self.active_ifvg['top']:
+                    print(f"\n[SMC] [iFVG INVALIDATED]: Bearish iFVG Violated.")
+                    self.active_ifvg = None
+                elif current_price >= self.active_ifvg['bottom'] and (time.time() - self.ai_throttle_timer > 3.0):
+                    self.ai_throttle_timer = time.time()
+                    sl = self.active_ifvg['top'] + self.dynamic_sl_padding
+                    signal_payload = {'signal': 'SELL', 'sl': sl, 'tp_price': target_low, 'confidence': 0.85, 'comment': "iFVG SELL"}
+                    self.active_ifvg = None
+            elif self.active_ifvg['type'] == 'BUY':
+                if current_price < self.active_ifvg['bottom']:
+                    print(f"\n[SMC] [iFVG INVALIDATED]: Bullish iFVG Violated.")
+                    self.active_ifvg = None
+                elif current_price <= self.active_ifvg['top'] and (time.time() - self.ai_throttle_timer > 3.0):
+                    self.ai_throttle_timer = time.time()
+                    sl = self.active_ifvg['bottom'] - self.dynamic_sl_padding
+                    signal_payload = {'signal': 'BUY', 'sl': sl, 'tp_price': target_high, 'confidence': 0.85, 'comment': "iFVG BUY"}
+                    self.active_ifvg = None
 
         return {'payload': signal_payload, 'ui': action_msg}
