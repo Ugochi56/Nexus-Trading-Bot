@@ -142,8 +142,7 @@ def main():
                 for strat in strategies.values(): strat.reset()
                 time.sleep(10); continue
                 
-            from datetime import timezone
-            server_time = datetime.fromtimestamp(tick.time, timezone.utc)
+            server_time = datetime.fromtimestamp(tick.time)
             server_hour = server_time.hour
             
             if CLOSE_ALL_ON_FRIDAY and server_time.weekday() == 4 and server_hour >= FRIDAY_CLOSE_HOUR:
