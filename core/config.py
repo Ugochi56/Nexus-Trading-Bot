@@ -66,7 +66,7 @@ DEVIATION = 20
 MIN_GAP_SIZE = 0.05
 RISK_REWARD_RATIO = 2.0  
 MIN_DYNAMIC_RR = 1.5
-MAX_SPREAD_POINTS = 50
+MAX_SPREAD_POINTS = 500  # Trial account spreads run 300-400 normally; only block extreme spikes
 PENDING_ORDER_EXPIRY_BARS = 6  # Cancel pending orders after 6 x 5min = 30 minutes
 ASIAN_OPEN_HOUR = 1      
 TRADING_END_HOUR = 21    
