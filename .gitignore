@@ -42,3 +42,6 @@ scratch/check_mt5_time.py
 scratch/check_mt5_time2.py
 scratch/trade_history.py
 data/codebase_audit.md
+data/backtest_report.png
+scratch/analyze.py
+src/report.py
