@@ -27,6 +27,31 @@ def connect_mt5():
     account_info = mt5.account_info()
     if account_info:
         print(f"\n[SUCCESS] Connected: {account_info.login} | ${account_info.balance:,.2f}")
+    
+    # Auto-calibrate spread limit based on broker's actual conditions
+    calibrate_spread_limit()
+
+def calibrate_spread_limit():
+    """Sample the broker's spread 5 times over 2.5 seconds and set the dynamic limit to 1.5x the average."""
+    global dynamic_spread_limit
+    samples = []
+    symbol_info = mt5.symbol_info(SYMBOL)
+    point = symbol_info.point if symbol_info and symbol_info.point > 0 else 0.001
+    
+    for _ in range(5):
+        tick = mt5.symbol_info_tick(SYMBOL)
+        if tick:
+            spread_pts = abs(tick.ask - tick.bid) / point
+            samples.append(spread_pts)
+        time.sleep(0.5)
+    
+    if samples:
+        avg_spread = sum(samples) / len(samples)
+        dynamic_spread_limit = int(avg_spread * 1.5)
+        print(f"[SPREAD] Auto-calibrated: Avg {avg_spread:.0f} pts -> Limit set to {dynamic_spread_limit} pts")
+    else:
+        dynamic_spread_limit = MAX_SPREAD_POINTS
+        print(f"[SPREAD] Calibration failed, using config default: {MAX_SPREAD_POINTS} pts")
 
 def check_daily_drawdown():
     account = mt5.account_info()
@@ -139,12 +164,13 @@ def execute_trade(signal, sl_price, risk_pct, magic_num=999000, comment_text="",
     tick = mt5.symbol_info_tick(SYMBOL)
     if tick is None: return False
     
-    # Spread Filter: Reject trade if broker spread exceeds safety threshold
+    # Spread Filter: Reject trade if broker spread exceeds dynamic safety threshold
     current_spread = abs(tick.ask - tick.bid)
     symbol_info = mt5.symbol_info(SYMBOL)
     spread_points = current_spread / symbol_info.point if symbol_info and symbol_info.point > 0 else 0
-    if spread_points > MAX_SPREAD_POINTS:
-        print(f"\n[SPREAD] Trade REJECTED. Spread {spread_points:.0f} pts > {MAX_SPREAD_POINTS} pts limit. Broker is gouging.")
+    spread_limit = dynamic_spread_limit if 'dynamic_spread_limit' in globals() else MAX_SPREAD_POINTS
+    if spread_points > spread_limit:
+        print(f"\n[SPREAD] Trade REJECTED. Spread {spread_points:.0f} pts > {spread_limit} pts limit.")
         return False
     
     price = tick.ask if signal == 'BUY' else tick.bid
