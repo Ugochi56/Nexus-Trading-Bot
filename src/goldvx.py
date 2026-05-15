@@ -3,9 +3,13 @@ import sys
 import os
 import joblib
 import shutil
+import warnings
 import pandas as pd
 import numpy as np
 from datetime import datetime, timezone, timedelta
+
+# Suppress sklearn parallel warnings (cosmetic only, does not affect predictions)
+warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
 
 # Add the project root to sys.path so 'core', 'engine' and 'strategies' can be found
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
