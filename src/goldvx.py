@@ -1,15 +1,14 @@
+import warnings
+warnings.filterwarnings("ignore") # Global suppression of all warnings
+
 import time
 import sys
 import os
 import joblib
 import shutil
-import warnings
 import pandas as pd
 import numpy as np
 from datetime import datetime, timezone, timedelta
-
-# Suppress sklearn parallel warnings (cosmetic only, does not affect predictions)
-warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
 
 # Add the project root to sys.path so 'core', 'engine' and 'strategies' can be found
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -238,7 +237,8 @@ def main():
                                 ai_conf=payload['confidence'],
                                 limit_price=payload.get('limit_price'),
                                 stop_price=payload.get('stop_price'),
-                                tp_price=payload.get('tp_price')
+                                tp_price=payload.get('tp_price'),
+                                feature_vector=payload.get('features')
                             )
                             # Remove manual instant call here since the global history loop handles it now
                             

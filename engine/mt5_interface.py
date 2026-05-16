@@ -153,7 +153,7 @@ def calculate_position_size(entry_price, sl_price, risk_pct):
     lots = round(lots / step) * step
     return max(symbol_info.volume_min, min(lots, symbol_info.volume_max))
 
-def execute_trade(signal, sl_price, risk_pct, magic_num=999000, comment_text="", ai_conf=0.0, limit_price=None, stop_price=None, tp_price=None):
+def execute_trade(signal, sl_price, risk_pct, magic_num=999000, comment_text="", ai_conf=0.0, limit_price=None, stop_price=None, tp_price=None, feature_vector=None):
     global virtual_ticket_counter
     
     if DYNAMIC_RISK:
@@ -252,10 +252,41 @@ def execute_trade(signal, sl_price, risk_pct, magic_num=999000, comment_text="",
     if result is None:
         print("[ERROR] Order Failed: mt5.order_send returned None (Network Timeout)")
         return False
-    if result.retcode != mt5.TRADE_RETCODE_DONE:
-        print(f"[ERROR] {exec_mode} Order Failed: {result.comment}")
+    if result.retcode not in [mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_PLACED]:
+        print(f"[ERROR] {exec_mode} Order Failed (Code {result.retcode}): {result.comment}")
         return False
-    print(f"[TRADE] {exec_mode} ORDER PLACED! Ticket: {result.order}")
+
+    print(f"[SUCCESS] {exec_mode} {'Executed' if result.retcode == mt5.TRADE_RETCODE_DONE else 'Placed'}! Ticket: {result.order}")
+    
+    # Log Full Context for Evolution Engine
+    if feature_vector is not None:
+        try:
+            log_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'master_decision_log.csv')
+            os.makedirs(os.path.dirname(log_file), exist_ok=True)
+            
+            # Fetch extra context
+            symbol_info = mt5.symbol_info(SYMBOL)
+            tick = mt5.symbol_info_tick(SYMBOL)
+            acc = mt5.account_info()
+            
+            spread = (tick.ask - tick.bid) / symbol_info.point if symbol_info and tick else 0
+            equity = acc.equity if acc else 0
+            balance = acc.balance if acc else 0
+            
+            # Prepare the data row
+            # Format: Timestamp, Ticket, Signal, Strategy, AI_Conf, Balance, Equity, Spread, Features...
+            feat_str = ",".join([f"{v:.6f}" for v in feature_vector])
+            header_str = "Timestamp,Ticket,Signal,Comment,AI_Conf,Balance,Equity,Spread,Features\n"
+            data_str = f"{datetime.now()},{result.order},{signal},{final_comment},{ai_conf:.4f},{balance:.2f},{equity:.2f},{spread:.1f},{feat_str}\n"
+            
+            header_needed = not os.path.exists(log_file)
+            with open(log_file, 'a') as f:
+                if header_needed:
+                    f.write(header_str)
+                f.write(data_str)
+        except Exception as e:
+            print(f"[ERROR] Failed to log full context: {e}")
+            
     return True
     
 def manage_pending_orders():
