@@ -275,9 +275,10 @@ def execute_trade(signal, sl_price, risk_pct, magic_num=999000, comment_text="",
             
             # Prepare the data row
             # Format: Timestamp, Ticket, Signal, Strategy, AI_Conf, Balance, Equity, Spread, Features...
-            feat_str = ",".join([f"{v:.6f}" for v in feature_vector])
+            safe_comment = final_comment.replace(',', ' ')
+            feat_str = "|".join([f"{v:.6f}" for v in feature_vector])
             header_str = "Timestamp,Ticket,Signal,Comment,AI_Conf,Balance,Equity,Spread,Features\n"
-            data_str = f"{datetime.now()},{result.order},{signal},{final_comment},{ai_conf:.4f},{balance:.2f},{equity:.2f},{spread:.1f},{feat_str}\n"
+            data_str = f"{datetime.now()},{result.order},{signal},{safe_comment},{ai_conf:.4f},{balance:.2f},{equity:.2f},{spread:.1f},{feat_str}\n"
             
             header_needed = not os.path.exists(log_file)
             with open(log_file, 'a') as f:

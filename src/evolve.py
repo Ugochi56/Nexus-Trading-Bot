@@ -111,7 +111,7 @@ def run_evolution():
                 if row['Spread'] > 50: # High spread for Gold
                     stats['bad_spread_losses'] += 1
                 
-                features = [float(x) for x in str(row['Features']).split(',')]
+                features = [float(x) for x in str(row['Features']).split('|')]
                 if len(features) > 6:
                     dist_ema = features[0]
                     adx = features[6]
