@@ -151,16 +151,16 @@ class SMCStrategy(BaseStrategy):
                         self.last_traded_fvg_id = self.active_fvg['time']
                         self.active_fvg = None
                     else:
-                        ai_verdict, ai_conf = self.get_trend_ai_permission(df_m5, df_h1, df_h4) 
+                        ai_verdict, ai_conf, feat_vec = self.get_trend_ai_permission(df_m5, df_h1, df_h4) 
                         if ai_verdict == 'BUY':
                             sl = self.active_fvg['bottom'] - self.dynamic_sl_padding
-                            signal_payload = {'signal': 'BUY', 'sl': sl, 'tp_price': target_high, 'confidence': ai_conf, 'comment': f"SMC AI:{ai_conf:.2f}"}
+                            signal_payload = {'signal': 'BUY', 'sl': sl, 'tp_price': target_high, 'confidence': ai_conf, 'comment': f"SMC AI:{ai_conf:.2f}", 'features': feat_vec}
                             self.last_traded_fvg_id = self.active_fvg['time']
                             self.active_fvg = None
                         elif ai_verdict == 'SELL' and ai_mode == 'OFFENSIVE' and macro_dir == 'DOWN':
                             print(f"\n[SMC] [AI TRAP INVERSION]: Front-running M5 BUY Trap into Macro SELL")
                             sl = self.active_fvg['top'] + self.dynamic_sl_padding
-                            signal_payload = {'signal': 'SELL', 'sl': sl, 'tp_price': target_low, 'confidence': ai_conf, 'comment': "TRAP SELL FVG"}
+                            signal_payload = {'signal': 'SELL', 'sl': sl, 'tp_price': target_low, 'confidence': ai_conf, 'comment': "TRAP SELL FVG", 'features': feat_vec}
                             self.last_traded_fvg_id = self.active_fvg['time']
                             self.active_fvg = None
                         else:
