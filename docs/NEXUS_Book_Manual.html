@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NEXUS Core: Book-Length Documentation</title>
+    <style>
+        body {
+            font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
+            line-height: 1.8;
+            color: #1a1a1a;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 50px;
+            background-color: #ffffff;
+            font-size: 16px;
+        }
+        h1, h2, h3, h4 {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #2c3e50;
+            page-break-after: avoid;
+        }
+        h1 { font-size: 2.8em; text-align: center; border-bottom: 3px solid #e74c3c; padding-bottom: 20px; margin-bottom: 50px; text-transform: uppercase; letter-spacing: 2px;}
+        h2 { font-size: 2.0em; margin-top: 60px; border-bottom: 1px solid #bdc3c7; padding-bottom: 10px; page-break-before: always; }
+        h3 { font-size: 1.5em; margin-top: 30px; color: #2980b9; }
+        p { text-align: justify; margin-bottom: 20px; }
+        code {
+            background-color: #f8f9fa;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            color: #d35400;
+            font-size: 0.9em;
+            border: 1px solid #e9ecef;
+        }
+        pre {
+            background-color: #2b2b2b;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            font-size: 0.9em;
+        }
+        pre code {
+            background-color: transparent;
+            color: inherit;
+            border: none;
+            padding: 0;
+        }
+        ul, ol { padding-left: 40px; margin-bottom: 25px; }
+        li { margin-bottom: 12px; }
+        .header-box {
+            text-align: center;
+            margin-bottom: 80px;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            border: 1px solid #dcdde1;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+        }
+        strong { color: #2c3e50; }
+        hr { border: 0; height: 1px; background-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0)); margin: 40px 0;}
+</style>
+</head>
+<body>
+    <h1 id="nexus-core-the-quantitative-engineering-manual">NEXUS Core: The Quantitative Engineering Manual</h1>
+<h2 id="advanced-algorithmic-trading-active-machine-learning">Advanced Algorithmic Trading &amp; Active Machine Learning</h2>
+<p><strong>Version:</strong> 2.1.0 ("Full Might" Evolution)
+<strong>Generated:</strong> May 18, 2026</p>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#1-executive-summary--philosophy">Executive Summary &amp; Philosophy</a></li>
+<li><a href="#2-quantitative-foundations">Quantitative Foundations</a><ul>
+<li>2.1 Smart Money Concepts (SMC) Theory</li>
+<li>2.2 Random Forest Machine Learning Integration</li>
+</ul>
+</li>
+<li><a href="#3-system-architecture--topography">System Architecture &amp; Topography</a><ul>
+<li>3.1 The Orchestrator Node (<code>goldvx.py</code>)</li>
+<li>3.2 The Logic Hub (<code>strategies/</code>)</li>
+<li>3.3 The Execution Bridge (<code>mt5_interface.py</code>)</li>
+</ul>
+</li>
+<li><a href="#4-mathematical-risk-engines">Mathematical Risk Engines</a><ul>
+<li>4.1 Dynamic Position Sizing Algorithms</li>
+<li>4.2 AI Confidence Scaling Multipliers</li>
+<li>4.3 Structural Risk-to-Reward Targeting</li>
+<li>4.4 Trade Defense Mechanisms (BE &amp; Trailing)</li>
+</ul>
+</li>
+<li><a href="#5-strategy-deep-dives">Strategy Deep Dives</a><ul>
+<li>5.1 Fair Value Gaps (FVG) &amp; Trap Inversions</li>
+<li>5.2 Confluence Modules (VWAP, BB, Liquidity)</li>
+</ul>
+</li>
+<li><a href="#6-the-full-might-evolution-engine">The "Full Might" Evolution Engine</a><ul>
+<li>6.1 Forensic Data Logging (<code>master_decision_log.csv</code>)</li>
+<li>6.2 Autonomous Retraining Protocols (<code>evolve.py</code>)</li>
+</ul>
+</li>
+<li><a href="#7-simulation--backtesting-architecture">Simulation &amp; Backtesting Architecture</a></li>
+<li><a href="#8-deployment--maintenance">Deployment &amp; Maintenance</a></li>
+</ol>
+<hr />
+<h2 id="1-executive-summary-philosophy">1. Executive Summary &amp; Philosophy</h2>
+<p>The NEXUS Trading Bot is not a simple heuristic script. It is a highly advanced, multi-threaded quantitative trading engine specifically engineered for the high-volatility XAUUSDm (Gold) CFD market. </p>
+<p>At its core, NEXUS operates on a hybrid philosophy: <strong>Structural Scanning paired with Algorithmic Momentum Validation.</strong> Human traders often fail because they lack the discipline to filter out sub-optimal structural setups. Traditional algorithmic bots fail because they rely purely on lagging indicators (like moving averages) without understanding the physical price-action structure of the market.</p>
+<p>NEXUS solves this by deploying a "Two-Key" verification system. Key 1 is purely structural—identifying institutional footprints like Fair Value Gaps (FVGs) and Order Blocks. Key 2 is purely mathematical—feeding a 9-dimensional vector of current market conditions into a trained <code>RandomForestClassifier</code> to determine if the physical structure is supported by underlying momentum.</p>
+<p>With the recent introduction of the <strong>"Full Might" Evolution Engine</strong>, NEXUS has transitioned from a static execution script into an Active Learning entity. It records its own failures, parses broker conditions at the millisecond of entry, and autonomously retrains its neural weights to adapt to shifting market regimes.</p>
+<h2 id="2-quantitative-foundations">2. Quantitative Foundations</h2>
+<h3 id="21-smart-money-concepts-smc-theory">2.1 Smart Money Concepts (SMC) Theory</h3>
+<p>Traditional retail trading relies on support/resistance and trendlines. NEXUS utilizes Smart Money Concepts (SMC), which hypothesizes that markets are moved by large institutional orders that leave distinct structural footprints.</p>
+<p><strong>The Fair Value Gap (FVG)</strong>
+An FVG occurs when institutional volume enters the market so aggressively that it leaves a "gap" in price action where no trading occurred between buyers and sellers. Mathematically, NEXUS defines a Bullish FVG as a 3-candle sequence where the low of Candle 3 is strictly greater than the high of Candle 1 by a minimum delta (<code>MIN_GAP_SIZE</code>).
+The theory states that price will eventually retrace to "fill" this gap to balance the market. NEXUS places execution zones precisely at the borders of these gaps.</p>
+<p><strong>Inversions &amp; Traps</strong>
+When an FVG is violently broken, it implies the institutional momentum was a trap or has fundamentally shifted. NEXUS immediately re-classifies the broken zone as an <strong>Inverted FVG (iFVG)</strong>, flipping its directional bias to ride the new momentum.</p>
+<h3 id="22-random-forest-machine-learning-integration">2.2 Random Forest Machine Learning Integration</h3>
+<p>To validate these structural setups, NEXUS utilizes <code>scikit-learn</code>'s <code>RandomForestClassifier</code>. 
+A Random Forest is an ensemble learning method that constructs a multitude of decision trees at training time.</p>
+<p><strong>The Feature Matrix</strong>
+For every setup, NEXUS calculates a 9-dimensional snapshot:
+1. <code>Dist_EMA_50</code>: The percentage distance from the micro-trend.
+2. <code>Dist_EMA_200</code>: The percentage distance from the macro-trend.
+3. <code>Dist_H1</code>: The percentage distance from the 1-Hour institutional trend.
+4. <code>RSI</code> &amp; <code>RSI_Zone</code>: Relative Strength Index metrics to gauge exhaustion.
+5. <code>Rel_Volatility</code>: The current candle size relative to the Average True Range (ATR).
+6. <code>ADX</code>: The Average Directional Index (Trend Strength).
+7. <code>H1_RSI</code> &amp; <code>H4_ADX</code>: Macro-level momentum filters.</p>
+<p>The algorithm splits these features across hundreds of decision trees, calculating the Gini impurity at each node to determine the optimal classification boundary. The final output is not a binary "Yes/No", but a raw probability distribution (e.g., 58% SELL, 42% BUY).</p>
+<h2 id="3-system-architecture-topography">3. System Architecture &amp; Topography</h2>
+<p>The codebase is heavily modularized to ensure thread-safety, speed, and logical separation of concerns.</p>
+<h3 id="31-the-orchestrator-node-srcgoldvxpy">3.1 The Orchestrator Node (<code>src/goldvx.py</code>)</h3>
+<p>This is the infinite execution loop. Its primary duties include:
+- <strong>State Synchronization:</strong> Ensuring the MT5 terminal is connected and equity trackers are accurate.
+- <strong>Data Polling:</strong> Fetching the latest <code>M5</code>, <code>H1</code>, and <code>H4</code> Pandas DataFrames.
+- <strong>Strategy Multiplexing:</strong> Iterating through the active strategies (<code>SMC_FVG</code>, <code>VWAP</code>, <code>BB_BREAKOUT</code>, etc.), passing the dataframes, and awaiting signal payloads.
+- <strong>Event Routing:</strong> If a signal payload is received and the engine is not actively in a trade, it routes the payload to the Execution Bridge.</p>
+<h3 id="32-the-logic-hub-strategies">3.2 The Logic Hub (<code>strategies/</code>)</h3>
+<p>The <code>strategies</code> directory acts as a pure mathematical sandbox. Scripts in this folder (like <code>smc_fvg.py</code>) have absolutely no knowledge of the MT5 broker, account balance, or open trades. They receive DataFrames, perform vectorized Pandas operations, consult the AI models, and return a standardized dictionary payload containing:
+- <code>signal</code>: 'BUY' or 'SELL'
+- <code>sl</code>: The structural Stop Loss price.
+- <code>tp_price</code>: The structural Take Profit price.
+- <code>confidence</code>: The AI probability score.
+- <code>features</code>: The raw 9-dimensional array used for the prediction.</p>
+<h3 id="33-the-execution-bridge-enginemt5_interfacepy">3.3 The Execution Bridge (<code>engine/mt5_interface.py</code>)</h3>
+<p>This module is the physical hand of the bot. It translates the abstract payloads into strict C-level MT5 <code>order_send</code> requests. It handles slippage (Deviation), magic number tagging, execution logging, and active trade management (Trailing Stops).</p>
+<h2 id="4-mathematical-risk-engines">4. Mathematical Risk Engines</h2>
+<p>NEXUS does not use static lot sizes. Every single execution is calculated dynamically to ensure exact risk distribution regardless of how wide or tight the Stop Loss is.</p>
+<h3 id="41-dynamic-position-sizing-algorithms">4.1 Dynamic Position Sizing Algorithms</h3>
+<p>When <code>mt5_interface.py</code> receives an execution signal, it fires the <code>calculate_position_size</code> function.</p>
+<pre><code class="language-python">sl_dist = abs(entry_price - sl_price)
+lots = (account.balance * (risk_pct / 100)) / (sl_dist * symbol_info.trade_contract_size)
+</code></pre>
+<p>If the account balance is $100 and the risk is 1%, the bot intends to lose exactly $1.00 if the Stop Loss is hit. If the FVG is massive (a 50-point SL), the bot will calculate a microscopic lot size. If the FVG is incredibly tight (a 10-point SL), it will calculate a much larger lot size. This ensures the geometric compounding of the account remains perfectly smooth.</p>
+<h3 id="42-ai-confidence-scaling-multipliers">4.2 AI Confidence Scaling Multipliers</h3>
+<p>The baseline risk (e.g., 1%) is further modified by the AI's confidence.
+If <code>DYNAMIC_RISK</code> is enabled:</p>
+<pre><code class="language-python">scale = max(0.5, min(1.5, (ai_conf - AI_CONFIDENCE_THRESHOLD) / (0.95 - AI_CONFIDENCE_THRESHOLD) * 1.0 + 0.5))
+risk_pct = risk_pct * scale
+</code></pre>
+<p>If the AI confidence perfectly matches the threshold (0.55), the scale is 0.5x (cutting risk in half for uncertain trades). If the AI is 95% confident, the scale is 1.5x (betting heavily on high-probability setups).</p>
+<h3 id="43-structural-risk-to-reward-targeting">4.3 Structural Risk-to-Reward Targeting</h3>
+<p>Rather than using a fixed math-based TP (like exactly 2.0x the SL), NEXUS maps the market structure using <code>map_market_structure()</code> to find the nearest Swing High or Swing Low. It places the Take Profit exactly at that liquidity pool.
+However, it enforces a mathematical floor: <code>MIN_DYNAMIC_RR = 1.5</code>. If the nearest Swing High is too close and only offers a 1.1 RR, the bot rejects the structural TP and enforces a strict mathematical <code>RISK_REWARD_RATIO = 2.0</code> to preserve the system's edge.</p>
+<h3 id="44-trade-defense-mechanisms">4.4 Trade Defense Mechanisms</h3>
+<p>NEXUS employs a strict capital preservation routine inside <code>manage_open_positions()</code>:
+1.  <strong>The 50% Break-Even Trigger:</strong> If the trade travels 50% of the distance to the TP, the engine immediately modifies the order, moving the Stop Loss to the Entry Price, and liquidating 50% of the position to secure banked profit.
+2.  <strong>The Shadow Trail:</strong> Once a trade is deeply in profit (&gt;$4.50), the SL detaches and follows the current price at a fixed distance ($3.00), locking in gains against sudden "V-Shape" reversals.</p>
+<h2 id="5-strategy-deep-dives">5. Strategy Deep Dives</h2>
+<h3 id="51-fair-value-gaps-fvg-trap-inversions">5.1 Fair Value Gaps (FVG) &amp; Trap Inversions</h3>
+<p>The flagship strategy (<code>smc_fvg.py</code>) is a masterpiece of quantitative trap-hunting.
+- <strong>FVG Detection:</strong> Uses a rolling 30-candle window to identify <code>c3['low'] &gt; c1['high']</code>.
+- <strong>The "Two-Key" Gate:</strong> As discussed, it requires both the structural FVG and an AI <code>prob &gt; 0.55</code>.
+- <strong>Trap Front-Running:</strong> If the AI predicts <code>SELL</code>, but the structure is a <code>BUY</code> FVG, the bot checks the H1 Macro Confluence. If the Macro trend is heavily bearish, the bot recognizes the <code>BUY</code> FVG as a "Retail Trap." Instead of ignoring the trade, it dynamically inverts the payload, executing a <code>SELL</code> directly into the gap to crush the trapped retail buyers.</p>
+<h3 id="52-secondary-confluence-modules">5.2 Secondary Confluence Modules</h3>
+<p>To ensure the bot operates in all market environments, secondary engines are engaged:
+- <strong>VWAP Reversion (<code>vwap_reversion.py</code>):</strong> Calculates the Volume Weighted Average Price with Standard Deviation bands. If price extends beyond the 2nd deviation (extreme extension) and curls back inward, it executes a mean-reversion trade toward the central VWAP line.
+- <strong>RSI Reversion (<code>rsi_reversion.py</code>):</strong> Hunts for severe exhaustion (RSI &gt; 80 or &lt; 20). If combined with a reversal AI model prediction, it snipes the exact top or bottom of a trend.
+- <strong>London Breakout (<code>london_breakout.py</code>):</strong> Calculates the high and low of the low-volume Asian Session. During the London open (highest volume period), it places straddle pending orders, anticipating a massive liquidity expansion in one direction.</p>
+<h2 id="6-the-full-might-evolution-engine">6. The "Full Might" Evolution Engine</h2>
+<p>In Version 2.1.0, NEXUS was upgraded from a static script into an Active Learning neural network.</p>
+<h3 id="61-forensic-data-logging">6.1 Forensic Data Logging</h3>
+<p>Every execution triggers the Forensic Logger inside <code>mt5_interface.py</code>. It writes a detailed row to <code>data/master_decision_log.csv</code>.
+Crucially, this is not just a list of trades. It is the exact <strong>"State of Mind"</strong> of the bot at the millisecond of execution. It records the Broker Spread, the Account Equity, the AI's exact confidence score, and the 9-dimensional Feature Vector.
+<em>Technical Note:</em> To prevent Pandas parsing errors, the feature vectors are delimited by pipes (<code>|</code>) within the CSV to ensure column alignment.</p>
+<h3 id="62-autonomous-retraining-protocols-evolvepy">6.2 Autonomous Retraining Protocols (<code>evolve.py</code>)</h3>
+<p>After a sample size of live trades, the <code>evolve.py</code> script is executed. 
+1.  <strong>Reconciliation:</strong> It connects to MT5 and pulls the exact historical deal history, matching order tickets to the internal <code>master_decision_log.csv</code>.
+2.  <strong>Profit/Loss Tagging:</strong> It updates the local dataset, marking each feature vector as a <code>1</code> (Win) or <code>0</code> (Loss).
+3.  <strong>Neural Reweighting:</strong> The script isolates the failure vectors (e.g., trades lost due to extremely low ADX or abnormally high broker spread) and retrains the <code>RandomForestClassifier</code>. The AI essentially "learns" that taking trades when the Spread is &gt; 50 points results in a 0% win rate, and will mathematically down-weight those setups in the future.</p>
+<h3 id="63-narrative-generation">6.3 Narrative Generation</h3>
+<p>To keep the human operator informed, <code>evolve.py</code> utilizes string formatting to generate a <code>Markdown</code> report ("Letter to Father") detailing exactly <em>why</em> it failed, what metrics caused the failure, and how it has adjusted its internal weights.</p>
+<h2 id="7-simulation-backtesting-architecture">7. Simulation &amp; Backtesting Architecture</h2>
+<p>NEXUS includes a custom-built, hyper-fast vectorized backtester (<code>src/backtester.py</code>).</p>
+<h3 id="71-vectorized-execution-simulation">7.1 Vectorized Execution Simulation</h3>
+<p>Standard backtesters (like MT5 Strategy Tester) iterate tick-by-tick, which takes hours. The NEXUS backtester downloads the raw OHLC data from the broker into Pandas DataFrames and simulates months of trading in seconds.</p>
+<p><strong>Mechanics:</strong>
+It slices the arrays (<code>df.iloc[i-200 : i+1]</code>) to recreate the exact view the bot would have had at that historical moment. It passes this slice to the exact same <code>evaluate()</code> functions used in live trading, ensuring 100% parity between backtest logic and live logic.</p>
+<h3 id="72-the-055-goldilocks-threshold-optimization">7.2 The <code>0.55</code> "Goldilocks" Threshold Optimization</h3>
+<p>Extensive live logging and backtesting revealed a critical optimization flaw. At <code>0.60</code> confidence, the bot was denying highly profitable trades because the AI was returning <code>0.58</code> and <code>0.59</code> scores during massive, sudden market crashes. 
+The configuration was permanently altered to <code>0.55</code>. This filter still successfully rejects pure 50/50 coin-flips but allows the bot to capture the massive momentum explosions that previously fell just short of the strict 60% requirement.</p>
+<h2 id="8-deployment-maintenance">8. Deployment &amp; Maintenance</h2>
+<h3 id="81-server-operations">8.1 Server Operations</h3>
+<p>NEXUS is designed to run on a Virtual Private Server (VPS) with sub-10ms latency to the broker's trading servers. </p>
+<h3 id="82-maintenance-protocols">8.2 Maintenance Protocols</h3>
+<ul>
+<li><strong>Weekly Restarts:</strong> Ensure memory leaks within the <code>MetaTrader5</code> Python C-library are flushed.</li>
+<li><strong>Model Evolution:</strong> The <code>evolve.py</code> script should be run every 20-50 trades to ensure the AI weights are continuously adapting to the current market regime. </li>
+<li><strong>Log Cleaning:</strong> The <code>master_decision_log.csv</code> will grow indefinitely. While this provides more training data, it should be periodically backed up to prevent file corruption.</li>
+</ul>
+<hr />
+<p><strong>NEXUS Core Engineering Division</strong>
+<em>End of Technical Manual.</em></p>
+</body>
+</html>
