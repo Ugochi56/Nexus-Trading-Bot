@@ -41,3 +41,7 @@ scratch/
 reports/
 data/master_decision_log.csv
 data/trade_features.csv
+local_docs/NEXUS_Mega_Manual.html
+local_docs/NEXUS_Enterprise_Manual.html
+local_docs/NEXUS_Enterprise_Manual.md
+Nexus_Core_Source.zip
