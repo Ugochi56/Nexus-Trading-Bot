@@ -14,7 +14,7 @@ class LiquiditySweepStrategy(BaseStrategy):
 
     def get_trend_ai_permission(self, df_m5, df_h1, df_h4):
         if not USE_AI_FILTER or self.trend_model is None:
-            return 'SKIP_CHECK', 0.0
+            return 'SKIP_CHECK', 0.0, None
         try:
             df = df_m5.copy()
             if 'EMA_50' not in df.columns:
@@ -57,11 +57,11 @@ class LiquiditySweepStrategy(BaseStrategy):
             prob_down = probs[0][0]
             prob_up = probs[0][1]
 
-            if prob_up >= AI_CONFIDENCE_THRESHOLD: return 'BUY', prob_up
-            elif prob_down >= AI_CONFIDENCE_THRESHOLD: return 'SELL', prob_down
-            else: return 'UNCERTAIN', max(prob_up, prob_down)
+            if prob_up >= AI_CONFIDENCE_THRESHOLD: return 'BUY', prob_up, X_live.values[0]
+            elif prob_down >= AI_CONFIDENCE_THRESHOLD: return 'SELL', prob_down, X_live.values[0]
+            else: return 'UNCERTAIN', max(prob_up, prob_down), X_live.values[0]
         except Exception as e:
-            return 'SKIP_CHECK', 0.0
+            return 'SKIP_CHECK', 0.0, None
 
     def find_fractals(self, df):
         """Identifies Swing Highs and Swing Lows (Fractals) over a 5-candle window."""
@@ -143,7 +143,7 @@ class LiquiditySweepStrategy(BaseStrategy):
                 ui_msg = f"[BSL SWEPT: {eqh:.2f}]"
                 
                 # Check AI validation
-                ai_verdict, confidence = self.get_trend_ai_permission(df_m5, df_h1, df_h4) if ai_mode else ('SELL', 0.80)
+                ai_verdict, confidence, feat_vec = self.get_trend_ai_permission(df_m5, df_h1, df_h4) if ai_mode else ('SELL', 0.80, None)
                 
                 if ai_verdict == 'SELL' and confidence >= 0.65 and current_time != self.last_traded_sweep_time:
                     target_tp = max([e for e in eql_zones if e < current_price], default=None)
@@ -153,7 +153,8 @@ class LiquiditySweepStrategy(BaseStrategy):
                         'limit_price': eqh, # Limit order precisely at the swept liquidity line
                         'tp_price': target_tp, # Structural Target: Nearest SSL
                         'confidence': confidence,
-                        'comment': f"LIQ_BSL_SWEEP"
+                        'comment': f"LIQ_BSL_SWEEP",
+                        'features': feat_vec
                     }
                     self.last_traded_sweep_time = current_time
                 break
@@ -167,7 +168,7 @@ class LiquiditySweepStrategy(BaseStrategy):
                     ui_msg = f"[SSL SWEPT: {eql:.2f}]"
                     
                     # Check AI validation
-                    ai_verdict, confidence = self.get_trend_ai_permission(df_m5, df_h1, df_h4) if ai_mode else ('BUY', 0.80)
+                    ai_verdict, confidence, feat_vec = self.get_trend_ai_permission(df_m5, df_h1, df_h4) if ai_mode else ('BUY', 0.80, None)
                     
                     if ai_verdict == 'BUY' and confidence >= 0.65 and current_time != self.last_traded_sweep_time:
                         target_tp = min([e for e in eqh_zones if e > current_price], default=None)
@@ -177,7 +178,8 @@ class LiquiditySweepStrategy(BaseStrategy):
                             'limit_price': eql, # Limit order precisely at the swept liquidity line
                             'tp_price': target_tp, # Structural Target: Nearest BSL
                             'confidence': confidence,
-                            'comment': f"LIQ_SSL_SWEEP"
+                            'comment': f"LIQ_SSL_SWEEP",
+                            'features': feat_vec
                         }
                         self.last_traded_sweep_time = current_time
                     break

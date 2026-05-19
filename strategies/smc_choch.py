@@ -15,7 +15,7 @@ class SMCChochStrategy(BaseStrategy):
 
     def get_trend_ai_permission(self, df_m5):
         if not USE_AI_FILTER or self.trend_model is None:
-            return 'SKIP_CHECK', 0.0
+            return 'SKIP_CHECK', 0.0, None
         try:
             import pandas_ta as ta
             import numpy as np
@@ -58,11 +58,11 @@ class SMCChochStrategy(BaseStrategy):
             prob_down = probs[0][0]
             prob_up = probs[0][1]
 
-            if prob_up >= AI_CONFIDENCE_THRESHOLD: return 'BUY', prob_up
-            elif prob_down >= AI_CONFIDENCE_THRESHOLD: return 'SELL', prob_down
-            else: return 'UNCERTAIN', max(prob_up, prob_down)
+            if prob_up >= AI_CONFIDENCE_THRESHOLD: return 'BUY', prob_up, X_live.values[0]
+            elif prob_down >= AI_CONFIDENCE_THRESHOLD: return 'SELL', prob_down, X_live.values[0]
+            else: return 'UNCERTAIN', max(prob_up, prob_down), X_live.values[0]
         except Exception as e:
-            return 'SKIP_CHECK', 0.0
+            return 'SKIP_CHECK', 0.0, None
 
     def find_origin_ob(self, df, start_idx, end_idx, ob_type):
         """
@@ -128,7 +128,7 @@ class SMCChochStrategy(BaseStrategy):
                 target_low = preceding_lows[-1]
                 if current_candle['close'] < target_low['price'] and target_low['price'] != self.last_traded_break_price:
                     # Bearish CHOCH Confirmed
-                    ai_verdict, ai_conf = self.get_trend_ai_permission(df_m5)
+                    ai_verdict, ai_conf, feat_vec = self.get_trend_ai_permission(df_m5)
                     if ai_verdict == 'SELL':
                         ob = self.find_origin_ob(df_m5, last_high['idx'], current_idx, 'SELL')
                         if ob:
@@ -141,7 +141,7 @@ class SMCChochStrategy(BaseStrategy):
                             
                             sl = ob['top'] + (atr * getattr(sys.modules['core.config'], 'SL_ATR_MULTIPLIER', 1.5))
                             limit_entry = ob['bottom']
-                            signal_payload = {'signal': 'SELL', 'sl': sl, 'limit_price': limit_entry, 'tp_price': target_low['price'], 'confidence': ai_conf, 'comment': f"CHOCH_DN:{ai_conf:.2f}"}
+                            signal_payload = {'signal': 'SELL', 'sl': sl, 'limit_price': limit_entry, 'tp_price': target_low['price'], 'confidence': ai_conf, 'comment': f"CHOCH_DN:{ai_conf:.2f}", 'features': feat_vec}
                             return {'payload': signal_payload, 'ui': "[BEARISH CHOCH]"}
 
         # 3. Detect Bullish CHOCH
@@ -152,7 +152,7 @@ class SMCChochStrategy(BaseStrategy):
                 target_high = preceding_highs[-1]
                 if current_candle['close'] > target_high['price'] and target_high['price'] != self.last_traded_break_price:
                     # Bullish CHOCH Confirmed
-                    ai_verdict, ai_conf = self.get_trend_ai_permission(df_m5)
+                    ai_verdict, ai_conf, feat_vec = self.get_trend_ai_permission(df_m5)
                     if ai_verdict == 'BUY':
                         ob = self.find_origin_ob(df_m5, last_low['idx'], current_idx, 'BUY')
                         if ob:
@@ -165,7 +165,7 @@ class SMCChochStrategy(BaseStrategy):
                             
                             sl = ob['bottom'] - (atr * getattr(sys.modules['core.config'], 'SL_ATR_MULTIPLIER', 1.5))
                             limit_entry = ob['top']
-                            signal_payload = {'signal': 'BUY', 'sl': sl, 'limit_price': limit_entry, 'tp_price': target_high['price'], 'confidence': ai_conf, 'comment': f"CHOCH_UP:{ai_conf:.2f}"}
+                            signal_payload = {'signal': 'BUY', 'sl': sl, 'limit_price': limit_entry, 'tp_price': target_high['price'], 'confidence': ai_conf, 'comment': f"CHOCH_UP:{ai_conf:.2f}", 'features': feat_vec}
                             return {'payload': signal_payload, 'ui': "[BULLISH CHOCH]"}
 
         return {'payload': signal_payload, 'ui': action_msg}
