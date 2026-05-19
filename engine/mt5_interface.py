@@ -3,6 +3,7 @@ import pandas as pd
 import pandas_ta as ta
 import sys
 import time
+import os
 from datetime import datetime
 from core.config import *
 from core.indicators import *
